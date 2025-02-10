@@ -16,12 +16,12 @@ export default async function Page({
 
   const Content = page.data.body;
 
-  // const lastEdit = await getGithubLastEdit({
-  //   path: `content/docs/${page.file.path}`,
-  //   owner: "front-jb",
-  //   repo: "website",
-  //   token: process.env.NEXT_PUBLIC_GITHUB_TOKEN,
-  // });
+  const lastEdit = await getGithubLastEdit({
+    path: `content/docs/${page.file.path}`,
+    owner: "front-jb",
+    repo: "website",
+    token: process.env.NEXT_PUBLIC_GITHUB_TOKEN,
+  });
 
   return (
     <DocsPage
@@ -29,7 +29,7 @@ export default async function Page({
       tableOfContent={{
         style: "clerk",
       }}
-      // lastUpdate={lastEdit ?? undefined}
+      lastUpdate={lastEdit ?? undefined}
       editOnGithub={{
         sha: "master",
         owner: "front-jb",

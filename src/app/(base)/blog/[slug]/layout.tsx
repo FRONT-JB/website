@@ -58,9 +58,7 @@ export default async function BlogLayout({
       </div>
 
       <div className="flex flex-col gap-4">
-        <InlineTOC items={page.data.toc} open>
-          목차
-        </InlineTOC>
+        <InlineTOC items={page.data.toc}>목차</InlineTOC>
         {children}
       </div>
 
