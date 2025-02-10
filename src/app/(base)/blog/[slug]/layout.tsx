@@ -32,7 +32,7 @@ export default async function BlogLayout({
         {page.data.title}
       </h1>
 
-      <div className="mb-6 mt-3 flex flex-row flex-wrap items-center gap-1">
+      <div className="mb-3 mt-3 flex flex-row flex-wrap items-center gap-1">
         <div className="flex flex-row flex-wrap gap-1">
           {page.data.authors.map((author, i) => (
             <Fragment key={i}>
@@ -57,7 +57,7 @@ export default async function BlogLayout({
         </p>
       </div>
 
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-8">
         <InlineTOC items={page.data.toc}>목차</InlineTOC>
         {children}
       </div>

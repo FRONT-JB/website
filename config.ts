@@ -4,16 +4,12 @@ export const urlBase = new URL(
   process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000",
 );
 
-export const domain = "https://yeecord.com";
+export const domain = urlBase;
 
 export const footer: FooterCategory[] = [
   {
-    title: "링크",
+    title: "외부 링크",
     items: [
-      {
-        label: "블로그",
-        href: "/blog/",
-      },
       {
         label: "GitHub",
         href: "https://github.com/FRONT-JB",
@@ -24,7 +20,7 @@ export const footer: FooterCategory[] = [
 ];
 
 export const blogAuthors: Record<string, AuthorData> = {
-  kane: {
+  jb: {
     name: "FRONT-JB",
     title: "프론트엔드",
     url: "https://github.com/FRONT-JB",

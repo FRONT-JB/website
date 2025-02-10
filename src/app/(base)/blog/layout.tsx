@@ -15,7 +15,7 @@ export const metadata: Metadata = {
       absolute: "Afaik",
       default: "Afaik",
     },
-    description: "Afaik - ",
+    description: "Afaik - %s",
   },
 };
 

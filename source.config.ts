@@ -5,6 +5,7 @@ import {
   frontmatterSchema,
 } from "fumadocs-mdx/config";
 import { z } from "zod";
+import { remarkImage } from "fumadocs-core/mdx-plugins";
 
 export const { meta, docs } = defineDocs();
 
@@ -26,8 +27,13 @@ export const blog = defineCollections({
 
 export default defineConfig({
   mdxOptions: {
-    remarkImageOptions: {
-      useImport: false,
-    },
+    remarkPlugins: [
+      [
+        remarkImage,
+        {
+          useImport: false,
+        },
+      ],
+    ],
   },
 });

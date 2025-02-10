@@ -1,4 +1,4 @@
-import { docs } from "@/app/source";
+import { source } from "@/app/source";
 import { mdxComponents } from "@/components/mdx";
 import { metadataImage } from "@/utils/metadata";
 import { domain } from "@config";
@@ -11,7 +11,7 @@ export default async function Page({
 }: {
   params: Promise<{ slug?: string[] }>;
 }) {
-  const page = docs.getPage((await params).slug);
+  const page = source.getPage((await params).slug);
   if (!page) notFound();
 
   const Content = page.data.body;
@@ -42,7 +42,7 @@ export default async function Page({
         <Content
           components={{
             ...mdxComponents,
-            Category: () => <DocsCategory page={page} from={docs} />,
+            Category: () => <DocsCategory page={page} from={source} />,
           }}
         />
       </DocsBody>
@@ -51,14 +51,14 @@ export default async function Page({
 }
 
 export function generateStaticParams(): { slug: string[] }[] {
-  return docs.generateParams();
+  return source.generateParams();
 }
 
 export async function generateMetadata(props: {
   params: Promise<{ slug?: string[] }>;
 }) {
   const params = await props.params;
-  const page = docs.getPage(params.slug);
+  const page = source.getPage(params.slug);
 
   if (!page) notFound();
 

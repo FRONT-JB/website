@@ -1,4 +1,4 @@
 {
-  "title": "使用教學",
-  "pages": ["index", "books", "frontend", "..."]
+  "title": "문서",
+  "pages": ["index", "---개발관련---", "books", "frontend", "..."]
 }

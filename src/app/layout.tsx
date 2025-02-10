@@ -29,16 +29,16 @@ export const metadata: Metadata = {
       absolute: "Afaik",
       default: "Afaik",
     },
-    description: "Afaik - ",
+    description: "Afaik - %s",
   },
   metadataBase: urlBase,
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="zh-TW" className={noto.className} suppressHydrationWarning>
+    <html lang="ko" className={noto.className} suppressHydrationWarning>
       <body className="flex min-h-screen flex-col">
-        <RootProvider>{children}</RootProvider>
+        <RootProvider search={{ enabled: false }}>{children}</RootProvider>
       </body>
     </html>
   );

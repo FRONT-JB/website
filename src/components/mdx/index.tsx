@@ -1,17 +1,14 @@
 import { ErrorCallout, Info, Tip, Warning } from "@/components/mdx/admonition";
-import Adsense from "@/components/mdx/adsense";
 import { LinkButton } from "@/components/mdx/link-button";
 import { ImageZoom } from "fumadocs-ui/components/image-zoom";
 import defaultMdxComponents from "fumadocs-ui/mdx";
 import type { FC, ImgHTMLAttributes } from "react";
 
 export * from "./admonition";
-export * from "./adsense";
 export * from "./link-button";
 
 export const mdxComponents = {
   ...defaultMdxComponents,
-  Adsense,
   Error: ErrorCallout,
   Info,
   LinkButton,
