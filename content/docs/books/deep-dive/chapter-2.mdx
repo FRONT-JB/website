@@ -7,7 +7,7 @@ description: 자바스크립트의 기본 개념과 동작 원리
 
 - 증가/감소(++/--) 연산자는 피연산자의 값을 변경하는 부수 효과가 있다.
 
-```js showLineNumbers
+```js
 var x = 1;
 
 // ++ 연산자는 피연산자의 값을 변경하는 암묵적 할당이 이뤄진다.
@@ -19,12 +19,12 @@ x--;
 console.log(x); // 1
 ```
 
-:::note 증가/감소 연산자
+<Callout type="info" title="증가/감소 연산자">
 
 - 피연산자 앞에 위치한 **전위 증가/감소 연산자는 먼저 피연산자의 값을 증가/감소 시킨 후** 다른 연산을 수행한다.
 - 피연산자 뒤에 위치한 **후위 증가/감소 연산자는 먼저 다른 연산을 수행한 후 피연산자의 값을 증가/감소** 시킨다.
 
-```js showLineNumbers
+```js
 var x = 5,
   result;
 
@@ -45,7 +45,7 @@ result = --x;
 console.log(result, x); // 5 5
 ```
 
-:::
+</Callout>
 
 ### 문자열 연결 연산자
 
@@ -59,9 +59,9 @@ console.log(result, x); // 5 5
   - 동등 비교 연산자<sup>(==)</sup>는 좌항과 우항의 피연산자를 비교할 때 먼저 **암묵적 타입 변환을 통해 타입을 일치시킨 후 같은 값인지 비교한다.**
   - 일치 비교 연산자<sup>(===)</sup>는 좌항과 우항의 피연산자가 **타입도 같고 값도 같은 경우에 한하여 true를 반환한다.**
 
-:::danger 주의 사항
+<Callout type="error" title="주의 사항">
 
-```js title="NaN" showLineNumbers
+```js title="NaN"
 // NaN은 자신과 일치하지 않는 유일한 값이다.
 NaN === NaN; // false
 
@@ -72,13 +72,13 @@ Number.isNaN(10); // false
 Number.isNaN(1 + undefined); // true
 ```
 
-```js title="숫자 0" showLineNumbers
+```js title="숫자 0"
 // 양의 0과 음의 0의 비교 (일치 비교/동등 비교 모두 true)
 0 === -0; // true
 0 == -0; // true
 ```
 
-:::
+</Callout>
 
 ## typeof 연산자
 
@@ -97,13 +97,13 @@ Number.isNaN(1 + undefined); // true
 | `typeof /abc/gi`       | object     |                  |
 | `typeof function() {}` | function   |                  |
 
-:::tip
+<Callout type="tip" title="typeof 연산자">
 
 - typeof 연산자로 `null` 값을 연산해 보면 `null`이 아닌 `object`를 반환한다는 데 주의하자.
   - 이는 자바스크립트의 첫 버전의 버그이다.
   - 값이 `null` 타입인지 확인할 때는 일치 연산자 <sup>(===)</sup>를 사용하자.
 
-:::
+</Callout>
 
 ## 제어문
 
@@ -111,7 +111,7 @@ Number.isNaN(1 + undefined); // true
 
 - 블록문<sup>(block statement/compound statement)</sup>은 0개 이상의 중괄호로 묶은 것으로, 코드 블록 또는 블록이라고 부르기도 한다.
 
-```js showLineNumbers
+```js
 // 블록문
 {
   var foo = 10;
@@ -133,7 +133,7 @@ function sum(a, b) {
 
 - if 문의 조건식이 불리언 값이 아닌 값으로 평가되면 자바스크립트 엔진에 의해 암묵적으로 불리언 값으로 강제 변환되어 실행할 코드 블록을 결정한다.
 
-```js showLineNumbers
+```js
 var x = 2;
 var result;
 
@@ -157,7 +157,7 @@ console.log(result); // 짝수
 
 - 문자열 연결 연산자 표현식을 평가하기 위해 문자열 연결 연산자의 피연산자 중에서 문자열 타입이 아닌 피연산자를 문자열 타입으로 암묵적 타입 변환한다.
 
-```js showLineNumbers
+```js
 1 + "2"; // "12"
 ```
 
@@ -166,7 +166,7 @@ console.log(result); // 짝수
 - 산술 연산자 표현식을 평가하기 위해 산술 연산자의 피연산자 중에서 숫자 타입이 아닌 피연산자를 숫자 타입으로 암묵적 타입 변환한다.
   - 이때 피연산자를 숫자 타입으로 변환할 수 없는 경우는 평가 결과가 NaN이다.
 
-```js showLineNumbers
+```js
 10 - "2"; // 8
 10 * "2"; // 20
 10 / "one"; // NaN
@@ -175,15 +175,15 @@ console.log(result); // 짝수
 - 비교 연산자는 피연산자의 크기를 비교하므로 모든 피연산자는 코드의 문맥상 모두 숫자 타입이어야 한다.
   - 자바스크립트 엔진은 비교 연산자 표현식을 평가하기 위해 비교 연산자의 피연산자 중에서 숫자 타입이 아닌 피연산자를 숫자 타입으로 암묵적 타입 변환한다.
 
-```js showLineNumbers
+```js
 "10" > 2; // true
 ```
 
-:::note + 단항 연산자
+\+ 단항 연산자
 
 - \+ 단항 연산자는 피연산자가 숫자 타입의 값이 아니면 숫자 타입의 값으로 암묵적 타입 변환을 수행한다.
 
-```js showLineNumbers
+```js
 // 문자열 타입
 
 +""; // 0
@@ -210,14 +210,12 @@ console.log(result); // 짝수
 +function () {}; // NaN
 ```
 
-::::danger 주의 사항
+<Callout type="error" title="주의 사항">
 
 - **빈 문자열, 빈 배열, null, false는 0**으로, **true는 1**로 변환된다.
 - **객체와 빈 배열이 아닌 배열, undefined는 변환이 되지 않아 NaN이 된다는 것에 주의**해야한다.
 
-::::
-
-:::
+</Callout>
 
 ## 객체란?
 
@@ -255,9 +253,9 @@ console.log(result); // 짝수
 - 함수는 일련의 과정을 문으로 구현하고 코드 블록으로 감싸서 하나의 실행 단위로 정의한 것이다.
 - 함수 내부로 입력을 전달받는 변수를 매개변수<sup>**(parameter)**</sup>, 입력을 인수<sup>**(argument)**</sup>, 출력을 반환값<sup>**(return value)**</sup>이라 한다.
 
-:::note 함수의 정의 방식
+<Callout type="info" title="함수의 정의 방식">
 
-```js title="함수 선언문" showLineNumbers
+```js title="함수 선언문"
 function add(x, y) {
   return x + y;
 }
@@ -266,7 +264,7 @@ function add(x, y) {
 - 함수 선언문은 함수 이름을 생략할 수 없다.
 - **함수 선언문 이전에 호출할 수 있다.**
 
-```js title="함수 표현식" showLineNumbers
+```js title="함수 표현식"
 const add = function (x, y) {
   return x + y;
 };
@@ -275,17 +273,17 @@ const add = function (x, y) {
 - 함수 표현식은 함수 이름을 생략할 수 있다. _(이를 익명 함수라 한다.)_
 - **함수 표현식 이전에 호출할 수 없다.**
 
-```js title="Function 생성자 함수" showLineNumbers
+```js title="Function 생성자 함수"
 const add = new Function("x", "y", "return x + y");
 ```
 
 - **Function 생성자 함수는 함수 선언문이나 함수 표현식으로 정의한 함수와 다르게 동작한다.**
   - 클로저를 생성하지 않는 등의 차이가 있다.
 
-```js title="화살표 함수" showLineNumbers
+```js title="화살표 함수"
 const add = (x, y) => x + y;
 ```
 
 - 기존 함수와 this 바인딩 방식이 다르며 prototype 프로퍼티가 없으며 arguments 객체를 생성하지 않는다.
 
-:::
+</Callout>
