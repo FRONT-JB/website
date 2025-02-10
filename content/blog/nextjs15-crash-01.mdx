@@ -1,0 +1,247 @@
+---
+title: 🚀 Nextjs15 App Router 시작하기 1
+authors: [kane]
+description: "Nextjs15의 App Router를 사용하여 서버 컴포넌트, 동적 라우팅, 데이터 패칭 등 핵심 기능을 알아봅니다"
+tags: ["Frontend", "Nextjs"]
+---
+
+## 🧐 Page 컴포넌트에서 async 함수를 써야 하는 이유
+
+<Info>
+  Nextjs15 에서는 **Page 컴포넌트가 기본적으로 서버 컴포넌트(Server Component)로
+  동작해요.** 즉, 서버에서 한 번만 실행되기 때문에 `async` 함수를 사용해도 전혀
+  문제없어요! 덕분에 데이터 패칭이 훨씬 간편해지고, 클라이언트에서 불필요한
+  로딩이 줄어들죠.
+</Info>
+
+```tsx
+// pages/book/page.tsx
+export default async function BookPage() {
+  const books = await fetchBooks(); // 비동기 처리
+
+  return <BookList books={books} />;
+}
+```
+
+## 🔗 URL Parameter와 Search Params
+
+<Info>
+  Nextjs15 에서는 URL에 포함된 동적 매개변수나 검색 쿼리(Search Params)를 다룰
+  때 **반드시 Promise를 반환하는 타입**으로 작성해야 해요.
+</Info>
+
+```tsx import {useSearchParams} from "next/navigation";
+export default async function SearchPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ query: string }>;
+}) {
+  const { query } = await searchParams;
+
+  return <h1>검색어: {query}</h1>;
+}
+```
+
+이렇게 하면 URL에서 `params`와 `searchParams` 값을 쉽게 가져와 사용할 수 있어요!
+
+## 📌 Dynamic Route (동적 라우트)
+
+<Info>Next.js에서는 동적 라우트를 손쉽게 설정할 수 있어요.</Info>
+
+### 📖 기본 동적 라우트
+
+폴더 이름에 `[id]` 같은 형식을 사용하면 해당 경로 값을 동적으로 받을 수 있어요. 또한, `params`는 Promise를 반환하기 때문에 `Promise<{ id: string }>`와 같이 Promise 타입으로 작성해야 하고, 페이지의 기본 내보내기 함수는 `async` 키워드를 사용해야 해요. 사용할 때는 `const { id } = await params;`처럼 동적으로 활용할 수 있어요.
+
+```tsx
+// app/book/[id]/page.tsx
+export default async function BookDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+
+  return <h1>책 ID: {id}</h1>;
+}
+```
+
+<Callout type="info" title="예시 URL">
+
+- `/book/123` → `params.id === '123'`
+- `/book/456` → `params.id === '456'`
+
+</Callout>
+
+### 📚 여러 개의 동적 라우트
+
+<Info>`[...id]`를 사용하면 여러 개의 값을 배열로 받을 수 있어요.</Info>
+
+```tsx
+// app/book/[...id]/page.tsx
+export default function BookDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string[] }>;
+}) {
+  const { id } = await params;
+
+  return <h1>책 ID 목록: {id.join(", ")}</h1>;
+}
+```
+
+<Callout type="info" title="예시 URL">
+
+- `/book/123/456` → `params.id === ['123', '456']`
+
+</Callout>
+
+<Callout type="error" title="주의">
+
+URL 파라미터가 없으면 **404 에러가 발생**할 수 있어요.
+
+</Callout>
+
+## 🎯 Optional Catch All Segments
+
+<Info>
+  URL 파라미터가 없어도 동작하도록 만들고 싶다면 `[[...id]]`를 사용하면 돼요.
+</Info>
+
+```tsx
+// app/book/[[...id]]/page.tsx
+export default async function BookPage({
+  params,
+}: {
+  params: Promise<{ id?: string[] }>;
+}) {
+  const { id } = await params;
+
+  if (!id) {
+    return <h1>책 리스트 페이지</h1>;
+  }
+
+  return <h1>책 ID 목록: {id.join(", ")}</h1>;
+}
+```
+
+<Callout type="info" title="예시 URL">
+
+- `/book` → `params.id === undefined` → 책 리스트 페이지 출력
+- `/book/1/2/3` → `params.id === ['1', '2', '3']` → 책 ID 목록: 1, 2, 3
+
+</Callout>
+
+## 📂 Route Grouping (라우트 그룹핑)
+
+<Info>라우트를 그룹으로 묶어서 관리하고 싶다면 `()`를 사용하면 돼요!</Info>
+
+```
+app/
+ ├── (dashboard)/
+ │   ├── layout.tsx
+ │   ├── page.tsx
+ │   ├── settings/page.tsx
+ │   └── profile/page.tsx
+```
+
+이렇게 하면 `(dashboard)` 그룹 안에 있는 모든 페이지가 동일한 레이아웃을 공유할 수 있어요.
+
+## 🚗 Navigating (네비게이팅)
+
+<Info>
+  App Router에서 페이지 이동이 발생하면 서버가 JS Bundle과 RSC Payload를
+  생성하여 전달해요. 이후 브라우저가 이를 실행하면서 페이지가 전환되죠!
+</Info>
+
+🔹 정적인 (Static) 페이지
+
+Production 환경에서는 미리 prefetch가 발생해요.
+
+prefetch 시 JS Bundle + RSC Payload가 함께 전달돼서 빠르게 페이지를 로드할 수 있어요.
+
+🔸 동적인 (Dynamic) 페이지
+
+prefetch 시 RSC Payload만 전달되고, JS Bundle은 필요할 때 브라우저에서 로드돼요.
+
+따라서 처음에는 가벼운 데이터를 받고, 이후 필요한 JS가 추가로 실행되는 방식이에요.
+
+이런 방식 덕분에 Next.js는 필요한 데이터만 적절하게 불러와 성능을 최적화할 수 있어요!
+
+## 🚀 Server Component란?
+
+<Info>
+  Nextjs15에서는 **모든 컴포넌트가 기본적으로 서버 컴포넌트**예요. 즉,
+  브라우저에서 실행되지 않고, 서버에서만 동작하죠.
+</Info>
+
+### ✅ Server Component의 특징
+
+- **서버에서 실행**되므로 API 호출이 훨씬 효율적이에요.
+- **자바스크립트 번들 크기가 줄어들어요.**
+- **보안성이 좋아요.** (데이터베이스 인증 정보 등을 노출하지 않음)
+- **서버 컴포넌트에서는 hooks, 이벤트 핸들러, 브라우저 API 같은 클라이언트 전용 기능을 사용할 수 없어요.**
+
+```tsx
+// app/page.tsx
+export default async function Home() {
+  const data = await fetchData();
+
+  return <div>{data}</div>;
+}
+```
+
+## ⚡ Client Component란?
+
+<Info>
+  클라이언트에서 실행해야 하는 경우 **`"use client"`** 지시어를 사용하면 돼요.
+  hooks, 이벤트 핸들러, 브라우저 API 등을 사용할 수 있어요.
+</Info>
+
+```tsx
+// app/components/ClientComponent.tsx
+"use client";
+
+import { useState } from "react";
+
+export default function ClientComponent() {
+  const [count, setCount] = useState(0);
+
+  return <button onClick={() => setCount(count + 1)}>클릭 {count}</button>;
+}
+```
+
+<Callout type="error" title="주의할 점">
+
+- **Client Component에서 Server Component를 import할 수 없어요.**
+
+  - 오류가 발생하거나 의도치 않은 문제가 발생할 수 있어요.
+  - 만약 Server Component를 Client Component에서 import하게 되면, Server Component가 자동으로 Client Component로 변환돼요.
+    - 이렇게 되면 자바스크립트 번들의 크기가 커질 수 있으므로 피하는 게 좋아요.
+  - Client Component에서 실행해야 하는 Server Component라면, Client Component의 `children` 타입으로 Server Component를 전달하는 게 좋아요. (이렇게 하면 Server Component가 Client Component로 변환되지 않아요.)
+
+  ```tsx
+  // app/page.tsx
+  "use client";
+
+  import ServerComponent from "@/components/ServerComponent";
+
+  export default function Page() {
+    return (
+      <ClientComponent>
+        <ServerComponent />
+      </ClientComponent>
+    );
+  }
+  ```
+
+</Callout>
+
+## 📍 정리
+
+1️⃣ Nextjs15의 App Router에서 Page 컴포넌트는 기본적으로 서버 컴포넌트라서 async 함수를 자유롭게 사용할 수 있어요!
+
+2️⃣ 동적 라우트에서는 params가 Promise를 반환하므로, const `{ id }` = await params; 형태로 데이터를 받아와야 해요.
+
+3️⃣ Production 환경에서 페이지 이동 시 정적 페이지는 JS Bundle과 RSC Payload를 함께 prefetch하고, 동적 페이지는 RSC Payload만 prefetch하여 성능을 최적화해요!
+
+4️⃣ 상호작용이 필요한 경우에는 Client Component를 사용하고 이 외에는 Server Component를 사용하는 게 좋아요! 특히, Client에서 Server Component를 직접 import하면 의도치 않은 문제가 발생할 수 있으니 주의하세요!
