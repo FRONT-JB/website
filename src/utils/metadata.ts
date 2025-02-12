@@ -2,6 +2,6 @@ import { source } from "@/app/source";
 import { createMetadataImage } from "fumadocs-core/server";
 
 export const metadataImage = createMetadataImage({
-  imageRoute: "/og",
+  imageRoute: "/docs-og",
   source,
 });

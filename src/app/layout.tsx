@@ -38,7 +38,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="ko" className={noto.className} suppressHydrationWarning>
       <body className="flex min-h-screen flex-col">
-        <RootProvider search={{ enabled: false }}>{children}</RootProvider>
+        <RootProvider>{children}</RootProvider>
       </body>
     </html>
   );

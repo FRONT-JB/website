@@ -11,7 +11,6 @@ const nextConfig = {
   experimental: {
     webpackBuildWorker: true,
   },
-  output: "export",
 };
 
 export default withMDX(nextConfig);
