@@ -5,10 +5,16 @@ type CommitResponse =
 type DetailedCommitResponse =
   RestEndpointMethodTypes["repos"]["getCommit"]["response"];
 
+const currentDate = new Date();
+currentDate.setDate(currentDate.getDate() - 4);
+const fourDaysAgo = currentDate.toISOString();
+
 const OTCOKIT_COMMIT_PAYLOAD = {
   owner: "front-jb", // 귀하의 GitHub 사용자명
   repo: "website", // 레포지토리 이름
-  per_page: 3, // 가져올 커밋 수
+  per_page: 4, // 가져올 커밋 수
+  since: fourDaysAgo, // 4일 전부터
+  until: new Date().toISOString(), // 현재까지
 };
 
 export async function getRelatedCommitMessages() {
@@ -61,8 +67,6 @@ export async function getRelatedCommitMessages() {
                 year: "numeric",
                 month: "long",
                 day: "numeric",
-                hour: "numeric",
-                minute: "numeric",
               }),
               url,
             }
@@ -93,8 +97,6 @@ export async function getRelatedCommitMessages() {
                 year: "numeric",
                 month: "long",
                 day: "numeric",
-                hour: "numeric",
-                minute: "numeric",
               }),
               url,
             }

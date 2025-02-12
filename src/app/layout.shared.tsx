@@ -1,61 +1,5 @@
 import type { BaseLayoutProps } from "fumadocs-ui/layouts/shared";
 import { BookIcon, LayoutListIcon } from "lucide-react";
-import { getRelatedCommitMessages } from "@/utils/octokit";
-import { LinkItemType } from "fumadocs-ui/layouts/links";
-
-const { latestBlogCommitList, latestDocsCommitList } =
-  await getRelatedCommitMessages();
-
-const documentMenu: LinkItemType = (() => {
-  const defaultMenu = {
-    url: "/docs",
-    icon: <BookIcon />,
-    text: "문서",
-  };
-
-  if (latestDocsCommitList.length) {
-    return {
-      ...defaultMenu,
-      type: "menu",
-      items: latestDocsCommitList.map((commit) => ({
-        icon: <BookIcon />,
-        text: `✨ 새로운 글 : ${commit?.message}`,
-        description: commit?.date || "-",
-        url: commit?.url || "/docs",
-      })),
-    };
-  }
-
-  return {
-    ...defaultMenu,
-    active: "nested-url",
-  };
-})();
-
-const blogMenu: LinkItemType = (() => {
-  const defaultMenu = {
-    url: "/blog",
-    icon: <LayoutListIcon />,
-    text: "블로그",
-  };
-
-  if (latestBlogCommitList.length) {
-    return {
-      ...defaultMenu,
-      type: "menu",
-      items: latestBlogCommitList.map((commit) => ({
-        icon: <LayoutListIcon />,
-        text: `✨ 새로운 글 : ${commit?.message}`,
-        description: commit?.date || "-",
-        url: commit?.url || "/blog",
-      })),
-    };
-  }
-  return {
-    ...defaultMenu,
-    active: "nested-url",
-  };
-})();
 
 export const layoutProps = {
   nav: {
@@ -87,10 +31,18 @@ export const layoutProps = {
     ),
   },
   links: [
-    documentMenu,
-
-    blogMenu,
-
+    {
+      url: "/docs",
+      icon: <BookIcon />,
+      text: "문서",
+      active: "nested-url",
+    },
+    {
+      url: "/blog",
+      icon: <LayoutListIcon />,
+      text: "블로그",
+      active: "nested-url",
+    },
     {
       type: "icon",
       url: "https://github.com/FRONT-JB",
