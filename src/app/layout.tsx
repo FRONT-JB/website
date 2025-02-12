@@ -29,7 +29,7 @@ export const metadata: Metadata = {
       absolute: "Afaik",
       default: "Afaik",
     },
-    description: "Afaik - %s",
+    description: "Afaik - As Far As I Know",
   },
   metadataBase: urlBase,
 };
