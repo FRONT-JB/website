@@ -5,7 +5,8 @@ module.exports = {
     const typeChoices = [
       { value: "✨ feat", name: "✨ feat:         새로운 기능" },
       { value: "🐛 fix", name: "🐛 fix:          버그 수정" },
-      { value: "📚 docs", name: "📚 docs:         문서 수정" },
+      { value: "📚 docs", name: "📚 docs:         문서 업데이트" },
+      { value: "📒 blog", name: "📒 blog:         블로그 업데이트" },
       { value: "🔨 refactor", name: "🔨 refactor:     리팩토링" },
       {
         value: "🚚 chore",

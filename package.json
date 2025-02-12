@@ -4,13 +4,14 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbo",
-    "build": "next build && next-sitemap --config next-sitemap.config.js && tsx ./scripts/add-to-assets.ts",
+    "build": "next build",
     "start": "next start",
     "lint": "eslint . --fix",
     "commit": "cz",
     "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,md,mdx}\""
   },
   "dependencies": {
+    "@octokit/rest": "^21.1.0",
     "@resvg/resvg-js": "^2.6.2",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
