@@ -6,6 +6,11 @@ export default async function LatestUpdate() {
   const { latestBlogCommitList, latestDocsCommitList } =
     await getRelatedCommitMessages();
 
+  const isEmptyRelatedCommitList =
+    latestBlogCommitList.length === 0 && latestDocsCommitList.length === 0;
+
+  if (isEmptyRelatedCommitList) return null;
+
   return (
     <div className="mx-auto flex max-w-[594px] flex-col gap-2 px-4 pt-2 md:pb-10">
       <p className="tex-sm text-center font-medium text-muted-foreground">
