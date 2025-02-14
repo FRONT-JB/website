@@ -28,14 +28,21 @@ module.exports = {
       {
         type: "input",
         name: "subject",
-        message: "2️⃣ 커밋 메시지를 입력하세요:",
+        message: "2️⃣ 커밋 제목을 입력하세요:",
         validate: (input) => input.length > 0 && input.length <= 100,
+      },
+      {
+        type: "input",
+        name: "description",
+        message: "3️⃣ 커밋 설명을 입력하세요 (선택사항):",
       },
     ];
 
     cz.prompt(questions).then((answers) => {
-      const { type, subject } = answers;
-      const message = `${type}: ${subject}`;
+      const { type, subject, description } = answers;
+      const message = description
+        ? `${type}: ${subject}\n\n${description}`
+        : `${type}: ${subject}`;
 
       const divider = "=".repeat(50);
       const decoratedMessage = `
