@@ -16,7 +16,11 @@ export const metadata: Metadata = {
 export default function BlogIndex() {
   const pages = blog
     .getPages()
-    .sort((a, b) => b.data.date.getTime() - a.data.date.getTime());
+    .sort(
+      (a, b) =>
+        new Date(b.data.lastModified || b.data.date).getTime() -
+        new Date(a.data.lastModified || a.data.date).getTime(),
+    );
 
   return (
     <main className="flex flex-1 flex-col pb-20">
