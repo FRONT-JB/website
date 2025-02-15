@@ -17,6 +17,14 @@ const OTCOKIT_COMMIT_PAYLOAD = {
   until: new Date().toISOString(), // 현재까지
 };
 
+function getCommitMessageWithoutPrefix(commitMessage: string, prefix: string) {
+  return commitMessage.split(prefix)[1];
+}
+
+function getCleanCommitTitle(commitMessage: string) {
+  return commitMessage.split("\n")[0];
+}
+
 export async function getRelatedCommitMessages() {
   const octokit = new Octokit({
     auth: process.env.NEXT_PUBLIC_GITHUB_TOKEN,
@@ -59,7 +67,9 @@ export async function getRelatedCommitMessages() {
 
         return addedFileTypeList.length > 0
           ? {
-              message: commit.commit.message.split("docs:")[1],
+              message: getCleanCommitTitle(
+                getCommitMessageWithoutPrefix(commit.commit.message, "docs:"),
+              ),
               date: new Date(
                 commit.commit.author?.date || "",
               ).toLocaleDateString("ko-KR", {
@@ -89,7 +99,9 @@ export async function getRelatedCommitMessages() {
 
         return addedFileTypeList.length > 0
           ? {
-              message: commit.commit.message.split("blog:")[1],
+              message: getCleanCommitTitle(
+                getCommitMessageWithoutPrefix(commit.commit.message, "blog:"),
+              ),
               date: new Date(
                 commit.commit.author?.date || "",
               ).toLocaleDateString("ko-KR", {
