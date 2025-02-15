@@ -45,7 +45,9 @@ export default async function BlogLayout({
         <p className="text-sm text-muted-foreground">
           <span className="mr-1">•</span>
           <span itemProp="datePublished">
-            {page.data.date.toLocaleDateString("ko-KR", {
+            {new Date(
+              page?.data?.lastModified || page?.data?.date,
+            ).toLocaleDateString("ko-KR", {
               weekday: "long",
               year: "numeric",
               month: "long",

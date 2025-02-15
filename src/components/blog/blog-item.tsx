@@ -52,8 +52,11 @@ export function BlogItem({ page }: { page: InferPageType<typeof blog> }) {
               />
             );
           })}
+
           <p className="ml-auto text-xs text-muted-foreground">
-            {page.data.date.toLocaleDateString("ko-KR", {
+            {new Date(
+              page?.data?.lastModified || page?.data?.date,
+            ).toLocaleDateString("ko-KR", {
               weekday: "long",
               year: "numeric",
               month: "long",

@@ -13,6 +13,7 @@ export default async function BlogPage({
   const page = blog.getPage([(await params).slug]);
 
   if (!page) notFound();
+
   const Content = page.data.body;
 
   return (
