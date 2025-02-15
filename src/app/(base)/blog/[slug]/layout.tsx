@@ -52,8 +52,6 @@ export default async function BlogLayout({
               year: "numeric",
               month: "long",
               day: "numeric",
-              hour: "numeric",
-              minute: "numeric",
             })}
           </span>
         </p>

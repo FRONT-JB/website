@@ -61,8 +61,6 @@ export function BlogItem({ page }: { page: InferPageType<typeof blog> }) {
               year: "numeric",
               month: "long",
               day: "numeric",
-              hour: "numeric",
-              minute: "numeric",
             })}
           </p>
         </div>
