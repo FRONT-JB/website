@@ -8,9 +8,6 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  experimental: {
-    webpackBuildWorker: true,
-  },
 };
 
 export default withMDX(nextConfig);
