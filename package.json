@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint . --fix",
     "commit": "cz",
-    "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,md,mdx}\""
+    "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,md,mdx}\"",
+    "til": "node scripts/til.js"
   },
   "dependencies": {
     "@octokit/rest": "^21.1.0",
