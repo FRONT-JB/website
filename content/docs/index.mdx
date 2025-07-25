@@ -3,7 +3,11 @@ title: 인트로
 description: Afaik의 문서페이지는 공부한 기록을 정리하는 목적으로 만들어졌습니다.
 ---
 
-import { BookOpen, CogIcon } from "lucide-react";
+import {
+  LibraryBigIcon,
+  AppWindowMacIcon,
+  BookOpenCheckIcon,
+} from "lucide-react";
 
 공부한 기록을 정리하는 목적으로 사용하고 있습니다.
 
@@ -12,15 +16,22 @@ import { BookOpen, CogIcon } from "lucide-react";
 <Card
   title="책 읽기"
   href="/docs/books/"
-  icon={<BookOpen />}
+  icon={<LibraryBigIcon />}
   description="책을 읽고 정리한 기록"
 />
 
 <Card
   title="프론트엔드"
   href="/docs/frontend/"
-  icon={<CogIcon />}
+  icon={<AppWindowMacIcon />}
   description="프론트엔드 관련 문서"
+/>
+
+<Card
+  title="Today I Learned"
+  href="/docs/2025/"
+  icon={<BookOpenCheckIcon />}
+  description="#새로운사실습득완료"
 />
 
 </Cards>
