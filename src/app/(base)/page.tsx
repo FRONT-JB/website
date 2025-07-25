@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { domain } from "@config";
 import clsx from "clsx";
-import LatestUpdate from "@/components/latest-update";
 
 export const metadata: Metadata = {
   alternates: {
@@ -40,8 +39,6 @@ export default function HomePage() {
           </p>
         </div>
       </div>
-
-      <LatestUpdate />
     </main>
   );
 }
