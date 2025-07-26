@@ -1,0 +1,37 @@
+[
+  {
+    "date": "2025.07.26",
+    "problems": [
+      {
+        "title": "a와 b 출력하기",
+        "platform": "프로그래머스",
+        "link": "https://school.programmers.co.kr/learn/courses/30/lessons/181951",
+        "tags": ["출력"]
+      },
+      {
+        "title": "문자열 반복해서 출력하기",
+        "platform": "프로그래머스",
+        "link": "https://school.programmers.co.kr/learn/courses/30/lessons/181950",
+        "tags": ["출력"]
+      },
+      {
+        "title": "대소문자 바꿔서 출력하기",
+        "platform": "프로그래머스",
+        "link": "https://school.programmers.co.kr/learn/courses/30/lessons/181949",
+        "tags": ["출력"]
+      },
+      {
+        "title": "특수문자 출력하기",
+        "platform": "프로그래머스",
+        "link": "https://school.programmers.co.kr/learn/courses/30/lessons/181948",
+        "tags": ["출력"]
+      },
+      {
+        "title": "덧셈식 출력하기",
+        "platform": "프로그래머스",
+        "link": "https://school.programmers.co.kr/learn/courses/30/lessons/181947",
+        "tags": ["출력", "연산"]
+      }
+    ]
+  }
+]
