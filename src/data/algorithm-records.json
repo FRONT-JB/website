@@ -1,5 +1,34 @@
 [
   {
+    "date": "2025.07.27",
+    "problems": [
+      {
+        "title": "문자열 붙여서 출력하기",
+        "platform": "프로그래머스",
+        "link": "https://school.programmers.co.kr/learn/courses/30/lessons/181952",
+        "tags": ["출력", "연산"]
+      },
+      {
+        "title": "문자열 돌리기",
+        "platform": "프로그래머스",
+        "link": "https://school.programmers.co.kr/learn/courses/30/lessons/181945",
+        "tags": ["출력", "연산"]
+      },
+      {
+        "title": "홀짝 구분하기",
+        "platform": "프로그래머스",
+        "link": "https://school.programmers.co.kr/learn/courses/30/lessons/181944",
+        "tags": ["출력", "연산"]
+      },
+      {
+        "title": "문자열 겹쳐쓰기",
+        "platform": "프로그래머스",
+        "link": "https://school.programmers.co.kr/learn/courses/30/lessons/181943",
+        "tags": ["출력", "연산"]
+      }
+    ]
+  },
+  {
     "date": "2025.07.26",
     "problems": [
       {
