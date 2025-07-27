@@ -25,6 +25,36 @@
         "platform": "프로그래머스",
         "link": "https://school.programmers.co.kr/learn/courses/30/lessons/181943",
         "tags": ["출력", "연산"]
+      },
+      {
+        "title": "문자열 섞기",
+        "platform": "프로그래머스",
+        "link": "https://school.programmers.co.kr/learn/courses/30/lessons/181942",
+        "tags": ["연산"]
+      },
+      {
+        "title": "문자 리스트를 문자열로 변환하기",
+        "platform": "프로그래머스",
+        "link": "https://school.programmers.co.kr/learn/courses/30/lessons/181941",
+        "tags": ["연산"]
+      },
+      {
+        "title": "문자열 곱하기",
+        "platform": "프로그래머스",
+        "link": "https://school.programmers.co.kr/learn/courses/30/lessons/181940",
+        "tags": ["연산"]
+      },
+      {
+        "title": "더 크게 합치기",
+        "platform": "프로그래머스",
+        "link": "https://school.programmers.co.kr/learn/courses/30/lessons/181939",
+        "tags": ["연산"]
+      },
+      {
+        "title": "두 수의 연산값 비교하기",
+        "platform": "프로그래머스",
+        "link": "https://school.programmers.co.kr/learn/courses/30/lessons/181938",
+        "tags": ["연산"]
       }
     ]
   },
