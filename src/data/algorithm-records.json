@@ -1,5 +1,40 @@
 [
   {
+    "date": "2025.07.28",
+    "problems": [
+      {
+        "title": "n의 배수",
+        "platform": "프로그래머스",
+        "link": "https://school.programmers.co.kr/learn/courses/30/lessons/181937",
+        "tags": ["연산", "조건문"]
+      },
+      {
+        "title": "공배수",
+        "platform": "프로그래머스",
+        "link": "https://school.programmers.co.kr/learn/courses/30/lessons/181936",
+        "tags": ["연산", "조건문"]
+      },
+      {
+        "title": "홀짝에 따라 다른 값 반환하기",
+        "platform": "프로그래머스",
+        "link": "https://school.programmers.co.kr/learn/courses/30/lessons/181935",
+        "tags": ["연산", "조건문"]
+      },
+      {
+        "title": "조건 문자열",
+        "platform": "프로그래머스",
+        "link": "https://school.programmers.co.kr/learn/courses/30/lessons/181934",
+        "tags": ["연산", "조건문"]
+      },
+      {
+        "title": "flag에 따라 다른 값 반환하기",
+        "platform": "프로그래머스",
+        "link": "https://school.programmers.co.kr/learn/courses/30/lessons/181933",
+        "tags": ["연산", "조건문"]
+      }
+    ]
+  },
+  {
     "date": "2025.07.27",
     "problems": [
       {
