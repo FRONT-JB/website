@@ -16,12 +16,18 @@ export default async function Page({
 
   const Content = page.data.body;
 
-  const lastEdit = await getGithubLastEdit({
-    path: `content/docs/${page.file.path}`,
-    owner: "front-jb",
-    repo: "website",
-    token: process.env.NEXT_PUBLIC_GITHUB_TOKEN,
-  });
+  let lastEdit;
+  try {
+    lastEdit = await getGithubLastEdit({
+      path: `content/docs/${page.file.path}`,
+      owner: "front-jb",
+      repo: "website",
+      token: process.env.NEXT_PUBLIC_GITHUB_TOKEN,
+    });
+  } catch (error) {
+    console.warn("Failed to fetch last edit time from Git:", error);
+    lastEdit = null;
+  }
 
   return (
     <DocsPage
