@@ -9,7 +9,7 @@ function createTIL() {
   const month = String(today.getMonth() + 1);
   const day = String(today.getDate()).padStart(2, "0");
 
-  const dateString = `${month}${day}`;
+  const dateString = `${month.padStart(2, "0")}${day}`;
   const yearFolder = path.join(
     __dirname,
     "..",
