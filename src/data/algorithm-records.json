@@ -1,5 +1,40 @@
 [
   {
+    "date": "2025.07.29",
+    "problems": [
+      {
+        "title": "코드 처리하기",
+        "platform": "프로그래머스",
+        "link": "https://school.programmers.co.kr/learn/courses/30/lessons/181932",
+        "tags": ["조건문"]
+      },
+      {
+        "title": "등차수열의 특정한 항만 더하기",
+        "platform": "프로그래머스",
+        "link": "https://school.programmers.co.kr/learn/courses/30/lessons/181931",
+        "tags": ["조건문"]
+      },
+      {
+        "title": "주사위 게임 2",
+        "platform": "프로그래머스",
+        "link": "https://school.programmers.co.kr/learn/courses/30/lessons/181930",
+        "tags": ["조건문"]
+      },
+      {
+        "title": "원소들의 곱과 합",
+        "platform": "프로그래머스",
+        "link": "https://school.programmers.co.kr/learn/courses/30/lessons/181929",
+        "tags": ["조건문"]
+      },
+      {
+        "title": "이어 붙인 수",
+        "platform": "프로그래머스",
+        "link": "https://school.programmers.co.kr/learn/courses/30/lessons/181928",
+        "tags": ["조건문"]
+      }
+    ]
+  },
+  {
     "date": "2025.07.28",
     "problems": [
       {
