@@ -1,5 +1,40 @@
 [
   {
+    "date": "2025.07.30",
+    "problems": [
+      {
+        "title": "마지막 두 원소",
+        "platform": "프로그래머스",
+        "link": "https://school.programmers.co.kr/learn/courses/30/lessons/181927",
+        "tags": ["조건문", "반복문"]
+      },
+      {
+        "title": "수 조작하기 1",
+        "platform": "프로그래머스",
+        "link": "https://school.programmers.co.kr/learn/courses/30/lessons/181926",
+        "tags": ["조건문", "반복문"]
+      },
+      {
+        "title": "수 조작하기 2",
+        "platform": "프로그래머스",
+        "link": "https://school.programmers.co.kr/learn/courses/30/lessons/181925",
+        "tags": ["조건문", "반복문"]
+      },
+      {
+        "title": "수열과 구간 쿼리 3",
+        "platform": "프로그래머스",
+        "link": "https://school.programmers.co.kr/learn/courses/30/lessons/181924",
+        "tags": ["조건문", "반복문"]
+      },
+      {
+        "title": "수열과 구간 쿼리 2",
+        "platform": "프로그래머스",
+        "link": "https://school.programmers.co.kr/learn/courses/30/lessons/181923",
+        "tags": ["조건문", "반복문"]
+      }
+    ]
+  },
+  {
     "date": "2025.07.29",
     "problems": [
       {
