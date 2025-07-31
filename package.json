@@ -10,6 +10,7 @@
     "commit": "cz",
     "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,md,mdx}\"",
     "til": "node scripts/til.js",
+    "til:update-meta": "node scripts/update-til-meta.js",
     "algorithm": "node scripts/add-algorithm.js"
   },
   "dependencies": {
