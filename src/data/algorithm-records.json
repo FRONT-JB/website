@@ -1,5 +1,40 @@
 [
   {
+    "date": "2025.07.31",
+    "problems": [
+      {
+        "title": "수열과 구간 쿼리 4",
+        "platform": "프로그래머스",
+        "link": "https://school.programmers.co.kr/learn/courses/30/lessons/181922",
+        "tags": ["반복문"]
+      },
+      {
+        "title": "배열 만들기 2",
+        "platform": "프로그래머스",
+        "link": "https://school.programmers.co.kr/learn/courses/30/lessons/181921",
+        "tags": ["반복문"]
+      },
+      {
+        "title": "카운트 업",
+        "platform": "프로그래머스",
+        "link": "https://school.programmers.co.kr/learn/courses/30/lessons/181920",
+        "tags": ["반복문"]
+      },
+      {
+        "title": "콜라츠 수열 만들기",
+        "platform": "프로그래머스",
+        "link": "https://school.programmers.co.kr/learn/courses/30/lessons/181919",
+        "tags": ["반복문"]
+      },
+      {
+        "title": "배열 만들기 4",
+        "platform": "프로그래머스",
+        "link": "https://school.programmers.co.kr/learn/courses/30/lessons/181918",
+        "tags": ["반복문"]
+      }
+    ]
+  },
+  {
     "date": "2025.07.30",
     "problems": [
       {
