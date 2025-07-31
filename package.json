@@ -9,7 +9,8 @@
     "lint": "eslint . --fix",
     "commit": "cz",
     "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,md,mdx}\"",
-    "til": "node scripts/til.js"
+    "til": "node scripts/til.js",
+    "algorithm": "node scripts/add-algorithm.js"
   },
   "dependencies": {
     "@octokit/rest": "^21.1.0",
@@ -32,6 +33,8 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "chalk": "4",
+    "inquirer": "^12.9.0",
     "@fumadocs/cli": "^0.0.2",
     "@types/mdx": "^2.0.13",
     "@types/node": "^20.14.13",
