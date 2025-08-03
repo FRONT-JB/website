@@ -1,5 +1,34 @@
 [
   {
+    "date": "2025.08.03",
+    "problems": [
+      {
+        "title": "최빈값 구하기",
+        "platform": "프로그래머스",
+        "link": "https://school.programmers.co.kr/learn/courses/30/lessons/120812",
+        "tags": ["사칙연산", "배열", "수학"]
+      },
+      {
+        "title": "피자 나눠 먹기 (2)",
+        "platform": "프로그래머스",
+        "link": "https://school.programmers.co.kr/learn/courses/30/lessons/120815",
+        "tags": ["수학", "배열"]
+      },
+      {
+        "title": "글자 이어 붙여 문자열 만들기",
+        "platform": "프로그래머스",
+        "link": "https://school.programmers.co.kr/learn/courses/30/lessons/181915",
+        "tags": ["조건문", "문자열"]
+      },
+      {
+        "title": "문자열 여러 번 뒤집기",
+        "platform": "프로그래머스",
+        "link": "https://school.programmers.co.kr/learn/courses/30/lessons/181913",
+        "tags": ["조건문", "문자열"]
+      }
+    ]
+  },
+  {
     "date": "2025.07.31",
     "problems": [
       {
