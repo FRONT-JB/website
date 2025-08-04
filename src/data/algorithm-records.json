@@ -1,5 +1,40 @@
 [
   {
+    "date": "2025.08.04",
+    "problems": [
+      {
+        "title": "핸드폰 번호 가리기",
+        "platform": "프로그래머스",
+        "link": "https://school.programmers.co.kr/learn/courses/30/lessons/12948",
+        "tags": ["반복문"]
+      },
+      {
+        "title": "배열 만들기5",
+        "platform": "프로그래머스",
+        "link": "https://school.programmers.co.kr/learn/courses/30/lessons/181912",
+        "tags": ["조건문"]
+      },
+      {
+        "title": "부분 문자열 이어 붙여 문자열 만들기",
+        "platform": "프로그래머스",
+        "link": "https://school.programmers.co.kr/learn/courses/30/lessons/181911",
+        "tags": ["조건문", "문자열"]
+      },
+      {
+        "title": "문자열의 뒤의 n글자",
+        "platform": "프로그래머스",
+        "link": "https://school.programmers.co.kr/learn/courses/30/lessons/181910",
+        "tags": ["문자열"]
+      },
+      {
+        "title": "n보다 커질 때까지 더하기",
+        "platform": "프로그래머스",
+        "link": "https://school.programmers.co.kr/learn/courses/30/lessons/181884",
+        "tags": ["배열"]
+      }
+    ]
+  },
+  {
     "date": "2025.08.03",
     "problems": [
       {
