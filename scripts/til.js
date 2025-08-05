@@ -49,9 +49,10 @@ function getTodayAlgorithmProblems(today) {
 }
 
 function generateTilContent(year, month, day, problems) {
+  const dayWithoutPadding = parseInt(day, 10);
   let content = `---
-title: "${month}월 ${day}일"
-description: "${year}년 ${month}월 ${day}일에 기록한 내용"
+title: "${month}월 ${dayWithoutPadding}일"
+description: "${year}년 ${month}월 ${dayWithoutPadding}일에 기록한 내용"
 ---
 
 ## 오늘 배운 것 (TIL)
