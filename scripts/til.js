@@ -25,6 +25,80 @@ function updateMetaJson(yearFolder, dateString) {
   }
 }
 
+function getTodayAlgorithmProblems(today) {
+  const dataPath = path.join(__dirname, "../src/data/algorithm-records.json");
+  
+  if (!fs.existsSync(dataPath)) {
+    return [];
+  }
+
+  try {
+    const data = JSON.parse(fs.readFileSync(dataPath, "utf8"));
+    const todayFormatted = today.toLocaleDateString("ko-KR", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).replace(/\. /g, ".").replace(/\.$/, "");
+
+    const todayRecord = data.find(record => record.date === todayFormatted);
+    return todayRecord ? todayRecord.problems : [];
+  } catch (error) {
+    console.log("알고리즘 기록을 읽는 중 오류 발생:", error.message);
+    return [];
+  }
+}
+
+function generateTilContent(year, month, day, problems) {
+  let content = `---
+title: "${month}월 ${day}일"
+description: "${year}년 ${month}월 ${day}일에 기록한 내용"
+---
+
+## 오늘 배운 것 (TIL)
+
+`;
+
+  if (problems.length > 0) {
+    content += `프로그래머스에서 ${problems.length}개 문제 해결
+
+## 핵심 요약 (TL;DR)
+
+`;
+    
+    // 태그 기반으로 요약 생성
+    const allTags = [...new Set(problems.flatMap(p => p.tags))];
+    const tagDescription = allTags.join(', ');
+    content += `${tagDescription} 관련 문제들을 통해 알고리즘 문제 해결 능력을 키웠다.
+
+## 풀어본 문제들
+
+`;
+
+    problems.forEach((problem, index) => {
+      content += `### ${index + 1}. ${problem.title}
+
+- **문제 링크**: ${problem.link}
+- **핵심**: 
+- **학습 포인트**: 
+- **태그**: ${problem.tags.join(', ')}
+
+`;
+    });
+
+    content += `---
+
+## 오늘의 깨달음
+
+`;
+  } else {
+    content += `### 
+
+`;
+  }
+
+  return content;
+}
+
 function createTIL() {
   const today = new Date();
   const year = today.getFullYear();
@@ -57,17 +131,11 @@ function createTIL() {
     return;
   }
 
+  // 오늘의 알고리즘 문제들 가져오기
+  const problems = getTodayAlgorithmProblems(today);
+  
   // MDX 파일 내용 생성
-  const content = `---
-title: "${month}월 ${day}일"
-description: "${year}년 ${month}월 ${day}일에 기록한 내용"
----
-
-## 오늘 배운 것 (TIL)
-
-### 
-
-`;
+  const content = generateTilContent(year, month, day, problems);
 
   // 파일 생성
   fs.writeFileSync(filePath, content, "utf8");
