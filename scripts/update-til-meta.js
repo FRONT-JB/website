@@ -15,16 +15,32 @@ function updateTilMeta() {
     const yearPath = path.join(docsPath, year);
     const metaPath = path.join(yearPath, "meta.json");
     
-    // MDX 파일들 찾기 (MMDD 형식)
-    const mdxFiles = fs.readdirSync(yearPath)
-      .filter(file => file.endsWith('.mdx') && /^\d{4}\.mdx$/.test(file))
-      .map(file => file.replace('.mdx', ''))
+    // MDX 파일들 찾기 (MMDD 형식, archive 폴더 제외)
+    const entries = fs.readdirSync(yearPath, { withFileTypes: true });
+    const mdxFiles = entries
+      .filter(entry => entry.isFile() && entry.name.endsWith('.mdx') && /^\d{4}\.mdx$/.test(entry.name))
+      .map(entry => entry.name.replace('.mdx', ''))
       .sort((a, b) => b.localeCompare(a)); // 역순 정렬 (최신순)
 
     if (mdxFiles.length > 0) {
+      // 기존 meta.json에서 아카이브 구조 확인
+      let existingPages = [];
+      if (fs.existsSync(metaPath)) {
+        try {
+          const existingMeta = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
+          existingPages = existingMeta.pages || [];
+        } catch (e) {
+          // 파싱 오류 시 빈 배열 사용
+        }
+      }
+
+      // 아카이브 구조 찾기
+      const archiveIndex = existingPages.indexOf('---아카이브---');
+      const archiveStructure = archiveIndex !== -1 ? existingPages.slice(archiveIndex) : ['---아카이브---', '...'];
+
       const metaData = {
         title: `${year}년`,
-        pages: mdxFiles
+        pages: [...mdxFiles, ...archiveStructure]
       };
 
       fs.writeFileSync(metaPath, JSON.stringify(metaData, null, 2), "utf8");
