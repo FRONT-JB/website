@@ -1,5 +1,22 @@
 [
   {
+    "date": "2025.08.05",
+    "problems": [
+      {
+        "title": "외계행성의 나이",
+        "platform": "프로그래머스",
+        "link": "https://school.programmers.co.kr/learn/courses/30/lessons/120834",
+        "tags": ["배열", "구현", "수학"]
+      },
+      {
+        "title": "접미사인지 확인하기",
+        "platform": "프로그래머스",
+        "link": "https://school.programmers.co.kr/learn/courses/30/lessons/181908",
+        "tags": ["문자열"]
+      }
+    ]
+  },
+  {
     "date": "2025.08.04",
     "problems": [
       {
