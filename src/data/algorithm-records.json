@@ -1,5 +1,40 @@
 [
   {
+    "date": "2025.08.06",
+    "problems": [
+      {
+        "title": "5명씩",
+        "platform": "프로그래머스",
+        "link": "https://school.programmers.co.kr/learn/courses/30/lessons/181886",
+        "tags": ["배열"]
+      },
+      {
+        "title": "순서 바꾸기",
+        "platform": "프로그래머스",
+        "link": "https://school.programmers.co.kr/learn/courses/30/lessons/181891",
+        "tags": ["배열"]
+      },
+      {
+        "title": "카운트 다운",
+        "platform": "프로그래머스",
+        "link": "https://school.programmers.co.kr/learn/courses/30/lessons/181899",
+        "tags": ["배열"]
+      },
+      {
+        "title": "배열 만들기 1",
+        "platform": "프로그래머스",
+        "link": "https://school.programmers.co.kr/learn/courses/30/lessons/181901",
+        "tags": ["배열"]
+      },
+      {
+        "title": "접두사인지 확인하기",
+        "platform": "프로그래머스",
+        "link": "https://school.programmers.co.kr/learn/courses/30/lessons/181906",
+        "tags": ["문자열"]
+      }
+    ]
+  },
+  {
     "date": "2025.08.05",
     "problems": [
       {
