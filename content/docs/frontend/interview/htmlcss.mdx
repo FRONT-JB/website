@@ -1,0 +1,754 @@
+---
+title: HTML/CSS
+description: HTML/CSS 관련 기술면접 질문과 답변
+---
+
+## TailwindCSS 의 장점과 단점은 무엇이고 사용하는데에 어려움은 없었나요?
+
+**TailwindCSS**는 **유틸리티 퍼스트(Utility-First)** 접근 방식을 사용하는 CSS 프레임워크입니다. 기존의 컴포넌트 기반 CSS 프레임워크(Bootstrap 등)와는 달리, 미리 정의된 작은 유틸리티 클래스들을 조합하여 스타일을 구성합니다.
+
+<Callout type="info" title="TailwindCSS란?">
+
+TailwindCSS는 HTML에 직접 클래스를 적용하여 스타일링하는 방식입니다. 예를 들어 `bg-blue-500 text-white px-4 py-2`처럼 여러 유틸리티 클래스를 조합합니다.
+
+</Callout>
+
+### TailwindCSS의 장점
+
+#### 1. 빠른 개발 속도
+
+```html
+<!-- 기존 CSS 방식 -->
+<style>
+  .button-primary {
+    background-color: #3b82f6;
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 0.375rem;
+    border: none;
+    font-weight: 500;
+    transition: background-color 0.2s;
+  }
+  .button-primary:hover {
+    background-color: #2563eb;
+  }
+</style>
+<button class="button-primary">클릭하세요</button>
+
+<!-- TailwindCSS 방식 -->
+<button
+  class="rounded bg-blue-500 px-4 py-2 font-medium text-white transition-colors hover:bg-blue-600"
+>
+  클릭하세요
+</button>
+```
+
+**장점:**
+
+- CSS 파일을 별도로 작성할 필요 없음
+- HTML 안에서 바로 스타일링 가능
+- 클래스명을 고민할 시간이 절약됨
+
+#### 2. 일관된 디자인 시스템
+
+```html
+<!-- 색상 팔레트가 미리 정의되어 일관성 유지 -->
+<div class="border border-blue-200 bg-blue-50">
+  <h3 class="font-semibold text-blue-900">제목</h3>
+  <p class="text-blue-700">내용</p>
+  <button class="bg-blue-500 text-white hover:bg-blue-600">버튼</button>
+</div>
+
+<!-- 간격도 일관된 scale로 관리 -->
+<div class="space-y-4">
+  <!-- 16px 간격 -->
+  <div class="p-2">2 * 0.25rem = 0.5rem 패딩</div>
+  <div class="p-4">4 * 0.25rem = 1rem 패딩</div>
+  <div class="p-8">8 * 0.25rem = 2rem 패딩</div>
+</div>
+```
+
+#### 3. 불필요한 CSS 제거 (PurgeCSS)
+
+```javascript
+// tailwind.config.js
+module.exports = {
+  content: [
+    "./src/**/*.{js,ts,jsx,tsx}", // 이 경로의 파일들만 스캔
+  ],
+  // 실제 사용된 클래스만 최종 CSS에 포함
+};
+```
+
+**결과:** 개발 시에는 모든 유틸리티 클래스가 포함되지만, 빌드 시에는 실제 사용된 클래스만 포함되어 CSS 파일 크기가 대폭 줄어듭니다.
+
+#### 4. 반응형 디자인이 쉬움
+
+```html
+<!-- 화면 크기별로 다른 스타일 적용 -->
+
+<!-- 기본: 작은 텍스트 -->
+<!-- 768px 이상: 보통 텍스트 -->
+<!-- 1024px 이상: 큰 텍스트 -->
+
+<!-- 기본: 1열 -->
+<!-- 768px 이상: 2열 -->
+<!-- 1024px 이상: 3열 -->
+<div
+  class="grid-cols-1 text-sm md:grid-cols-2 md:text-base lg:grid-cols-3 lg:text-lg"
+>
+  <!-- 내용 -->
+</div>
+```
+
+#### 5. 커스터마이징이 용이
+
+```javascript
+// tailwind.config.js
+module.exports = {
+  theme: {
+    extend: {
+      colors: {
+        "brand-blue": "#1e40af",
+        "brand-green": "#059669",
+      },
+      spacing: {
+        72: "18rem", // 새로운 간격 추가
+        84: "21rem",
+        96: "24rem",
+      },
+      fontFamily: {
+        sans: ["Noto Sans KR", "sans-serif"],
+      },
+    },
+  },
+};
+```
+
+### TailwindCSS의 단점
+
+#### 1. HTML이 복잡해짐
+
+```html
+<!-- 클래스가 많아서 읽기 어려워짐 -->
+<button
+  class="inline-flex items-center justify-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors duration-200 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+>
+  복잡한 버튼
+</button>
+```
+
+**해결책:**
+
+```jsx
+// 컴포넌트로 추상화
+const Button = ({ children, variant = "primary", ...props }) => {
+  const baseClasses =
+    "inline-flex items-center justify-center px-4 py-2 text-sm font-medium rounded-md transition-colors duration-200";
+  const variantClasses = {
+    primary: "text-white bg-blue-600 hover:bg-blue-700",
+    secondary: "text-gray-700 bg-gray-200 hover:bg-gray-300",
+  };
+
+  return (
+    <button className={`${baseClasses} ${variantClasses[variant]}`} {...props}>
+      {children}
+    </button>
+  );
+};
+```
+
+#### 2. 학습 곡선
+
+```html
+<!-- 이 클래스들이 뭘 의미하는지 외워야 함 -->
+<div
+  class="flex flex-col space-y-2 rounded-lg border border-gray-200 bg-gray-50 p-4 shadow-sm sm:flex-row sm:space-x-4 sm:space-y-0"
+></div>
+```
+
+신입 개발자에게는 다음이 어려울 수 있습니다:
+
+- `flex-col`이 `flex-direction: column`인 것
+- `sm:` 접두사가 `@media (min-width: 640px)`를 의미하는 것
+- `space-y-2`가 자식 요소들 사이에 세로 간격을 주는 것
+
+#### 3. 디자이너와의 협업 어려움
+
+```html
+<!-- 디자이너가 이해하기 어려운 코드 -->
+<div class="bg-gradient-to-br from-purple-400 via-pink-500 to-red-500">
+  <!-- 디자이너: "이게 무슨 색상이죠?" -->
+</div>
+```
+
+### 실제 사용 경험과 어려움
+
+#### 초기 학습 단계에서의 어려움
+
+```jsx
+// ❌ 처음에 자주 하는 실수들
+function BadExample() {
+  return (
+    <div>
+      {/* 클래스 순서가 엉망 */}
+      <div className="rounded bg-blue-500 p-4 text-white hover:bg-blue-600">
+        {/* 불필요한 중복 */}
+        <p className="text-lg font-bold text-white">제목</p>
+        <p className="text-sm text-white">내용</p>
+
+        {/* 반응형을 잘못 이해 */}
+        <div className="w-full sm:w-2/3 md:w-1/2 lg:w-1/3">잘못된 순서</div>
+      </div>
+    </div>
+  );
+}
+
+// ✅ 올바른 사용법
+function GoodExample() {
+  return (
+    <div className="rounded bg-blue-500 p-4 text-white transition-colors hover:bg-blue-600">
+      {/* 부모에서 색상 상속 */}
+      <h3 className="text-lg font-bold">제목</h3>
+      <p className="text-sm opacity-90">내용</p>
+
+      {/* 올바른 반응형 순서: 작은 화면부터 */}
+      <div className="w-full sm:w-2/3 md:w-1/2 lg:w-1/3">올바른 순서</div>
+    </div>
+  );
+}
+```
+
+#### 해결했던 실제 문제들
+
+```jsx
+// 문제: 같은 스타일이 반복됨
+function RepetitiveCode() {
+  return (
+    <div>
+      <button className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded">버튼1</button>
+      <button className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded">버튼2</button>
+      <button className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded">버튼3</button>
+    </div>
+  );
+}
+
+// 해결: CSS 컴포넌트 클래스 생성
+/* styles.css */
+@layer components {
+  .btn-primary {
+    @apply bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded transition-colors;
+  }
+}
+
+// 또는 React 컴포넌트로 추상화
+const PrimaryButton = ({ children, className = '', ...props }) => (
+  <button
+    className={`bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded transition-colors ${className}`}
+    {...props}
+  >
+    {children}
+  </button>
+);
+```
+
+## css-in-js 라이브러리의 장점과 단점은 무엇인가요?
+
+**CSS-in-JS**는 JavaScript 파일 안에서 CSS를 작성하는 방법론입니다. 대표적인 라이브러리로는 **styled-components**, **emotion**, **JSS**, **stitches** 등이 있습니다.
+
+<Callout type="info" title="CSS-in-JS란?">
+
+CSS-in-JS는 컴포넌트의 스타일을 JavaScript로 정의하는 방식입니다. 스타일이 컴포넌트와 함께 관리되어 더 모듈화된 개발이 가능합니다.
+
+</Callout>
+
+### CSS-in-JS 기본 예시
+
+```jsx
+// styled-components 예시
+import styled from "styled-components";
+
+// 스타일이 적용된 컴포넌트 생성
+const Button = styled.button`
+  background-color: ${(props) => (props.primary ? "#007bff" : "#6c757d")};
+  color: white;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 0.25rem;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+
+  &:hover {
+    background-color: ${(props) => (props.primary ? "#0056b3" : "#545b62")};
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+`;
+
+// 사용
+function App() {
+  return (
+    <div>
+      <Button primary>Primary 버튼</Button>
+      <Button>Secondary 버튼</Button>
+      <Button disabled>비활성 버튼</Button>
+    </div>
+  );
+}
+```
+
+### CSS-in-JS의 장점
+
+#### 1. 컴포넌트 스코프 스타일링
+
+```jsx
+// ❌ 기존 CSS - 전역 스코프 문제
+/* styles.css */
+.button {
+  background-color: blue;
+}
+
+.card .button {  /* 덮어쓰기 위해 더 구체적인 셀렉터 필요 */
+  background-color: green;
+}
+
+// ✅ CSS-in-JS - 자동으로 고유한 클래스명 생성
+const Button = styled.button`
+  background-color: blue;
+`;
+
+const Card = styled.div`
+  ${Button} {  /* 중첩 선택자도 쉽게 */
+    background-color: green;
+  }
+`;
+```
+
+생성되는 HTML:
+
+```html
+<!-- 자동으로 고유한 클래스명 생성 -->
+<button class="sc-bdvvaa jIzXuG">버튼</button>
+<div class="sc-bdfBQB kFGWyT">
+  <button class="sc-bdvvaa bQWxyz">카드 안의 버튼</button>
+</div>
+```
+
+#### 2. 동적 스타일링
+
+```jsx
+// props에 따라 동적으로 스타일 변경
+const ProgressBar = styled.div`
+  width: 100%;
+  height: 20px;
+  background-color: #f0f0f0;
+  border-radius: 10px;
+  overflow: hidden;
+`;
+
+const ProgressFill = styled.div`
+  height: 100%;
+  background-color: ${(props) => {
+    if (props.percentage < 30) return "#dc3545"; // 빨강
+    if (props.percentage < 70) return "#ffc107"; // 노랑
+    return "#28a745"; // 초록
+  }};
+  width: ${(props) => props.percentage}%;
+  transition: all 0.3s ease;
+
+  /* 애니메이션도 동적으로 */
+  animation: ${(props) => (props.animated ? "pulse 1s infinite" : "none")};
+
+  @keyframes pulse {
+    0% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.7;
+    }
+    100% {
+      opacity: 1;
+    }
+  }
+`;
+
+// 사용
+function ProgressIndicator({ value, animated = false }) {
+  return (
+    <ProgressBar>
+      <ProgressFill percentage={value} animated={animated}>
+        {value}%
+      </ProgressFill>
+    </ProgressBar>
+  );
+}
+```
+
+#### 3. 테마 시스템
+
+```jsx
+// 테마 정의
+const lightTheme = {
+  colors: {
+    primary: "#007bff",
+    background: "#ffffff",
+    text: "#000000",
+  },
+  spacing: {
+    small: "0.5rem",
+    medium: "1rem",
+    large: "2rem",
+  },
+};
+
+const darkTheme = {
+  colors: {
+    primary: "#0056b3",
+    background: "#1a1a1a",
+    text: "#ffffff",
+  },
+  spacing: {
+    small: "0.5rem",
+    medium: "1rem",
+    large: "2rem",
+  },
+};
+
+// 테마를 사용하는 컴포넌트
+const ThemedButton = styled.button`
+  background-color: ${(props) => props.theme.colors.primary};
+  color: ${(props) => props.theme.colors.text};
+  padding: ${(props) => props.theme.spacing.medium};
+  border: none;
+  border-radius: 4px;
+`;
+
+const Container = styled.div`
+  background-color: ${(props) => props.theme.colors.background};
+  color: ${(props) => props.theme.colors.text};
+  min-height: 100vh;
+  padding: ${(props) => props.theme.spacing.large};
+`;
+
+// ThemeProvider로 전역 테마 제공
+import { ThemeProvider } from "styled-components";
+
+function App() {
+  const [isDark, setIsDark] = useState(false);
+
+  return (
+    <ThemeProvider theme={isDark ? darkTheme : lightTheme}>
+      <Container>
+        <ThemedButton onClick={() => setIsDark(!isDark)}>
+          테마 변경
+        </ThemedButton>
+      </Container>
+    </ThemeProvider>
+  );
+}
+```
+
+#### 4. 자동 벤더 프리픽스
+
+```jsx
+const FlexBox = styled.div`
+  display: flex; /* 자동으로 -webkit-flex 등 추가 */
+  user-select: none; /* 자동으로 -webkit-user-select 등 추가 */
+  backdrop-filter: blur(10px); /* 자동으로 -webkit-backdrop-filter 추가 */
+`;
+```
+
+#### 5. 죽은 코드 제거
+
+```jsx
+// 컴포넌트가 삭제되면 스타일도 함께 삭제됨
+const UnusedComponent = styled.div`
+  /* 이 컴포넌트를 삭제하면 이 스타일도 자동으로 사라짐 */
+`;
+```
+
+### CSS-in-JS의 단점
+
+#### 1. 런타임 성능 비용
+
+```jsx
+// 매 렌더마다 스타일이 재계산됨
+const DynamicComponent = styled.div`
+  /* 이 계산이 매번 실행됨 */
+  color: ${(props) => expensiveColorCalculation(props.data)};
+
+  /* 복잡한 조건문도 매번 평가 */
+  background: ${(props) => {
+    if (props.type === "primary") return "#007bff";
+    if (props.type === "secondary") return "#6c757d";
+    if (props.type === "success") return "#28a745";
+    // ... 복잡한 로직
+  }};
+`;
+```
+
+**해결책:**
+
+```jsx
+// 1. 메모이제이션 사용
+const memoizedStyle = useMemo(
+  () => ({
+    color: expensiveColorCalculation(data),
+  }),
+  [data],
+);
+
+// 2. CSS 변수 활용
+const OptimizedComponent = styled.div`
+  color: var(--dynamic-color);
+`;
+
+// 3. 정적 스타일과 동적 스타일 분리
+const BaseComponent = styled.div`
+  /* 정적 스타일 */
+  padding: 1rem;
+  border-radius: 4px;
+`;
+
+const DynamicComponent = styled(BaseComponent)`
+  /* 동적 스타일만 여기에 */
+  color: ${(props) => props.color};
+`;
+```
+
+#### 2. 번들 크기 증가
+
+```jsx
+// styled-components 라이브러리 자체의 크기
+import styled from "styled-components"; // ~13KB gzipped
+
+// 더 가벼운 대안들
+import { styled } from "@stitches/react"; // ~6KB
+import { css } from "@emotion/css"; // ~5KB
+```
+
+#### 3. 서버사이드 렌더링(SSR) 복잡성
+
+```jsx
+// Next.js에서 styled-components 설정
+// _document.js
+import Document from 'next/document';
+import { ServerStyleSheet } from 'styled-components';
+
+export default class MyDocument extends Document {
+  static async getInitialProps(ctx) {
+    const sheet = new ServerStyleSheet();
+    const originalRenderPage = ctx.renderPage;
+
+    try {
+      ctx.renderPage = () =>
+        originalRenderPage({
+          enhanceApp: (App) => (props) =>
+            sheet.collectStyles(<App {...props} />),
+        });
+
+      const initialProps = await Document.getInitialProps(ctx);
+      return {
+        ...initialProps,
+        styles: (
+          <>
+            {initialProps.styles}
+            {sheet.getStyleElement()}
+          </>
+        ),
+      };
+    } finally {
+      sheet.seal();
+    }
+  }
+}
+
+// babel 설정도 필요
+// .babelrc
+{
+  "plugins": [["styled-components", { "ssr": true }]]
+}
+```
+
+#### 4. 디버깅의 어려움
+
+```jsx
+// 생성된 클래스명으로는 어떤 컴포넌트인지 알기 어려움
+<div class="sc-bdvvaa jIzXuG"></div> <!-- 이게 뭔지 모르겠음 -->
+
+// 해결책: displayName 설정
+const Button = styled.button`
+  /* 스타일 */
+`;
+Button.displayName = 'CustomButton'; // 디버깅 시 도움됨
+```
+
+#### 5. 학습 곡선
+
+```jsx
+// 기존 CSS 지식에 더해 라이브러리별 문법 학습 필요
+// styled-components
+const Button = styled.button``;
+
+// emotion
+const Button = styled.button``;
+/** @jsxImportSource @emotion/react */
+const Button = () => (
+  <button
+    css={css`
+      color: red;
+    `}
+  >
+    버튼
+  </button>
+);
+
+// stitches
+const Button = styled("button", {});
+```
+
+### 각 라이브러리별 특징
+
+#### styled-components
+
+```jsx
+// 장점: 가장 널리 사용됨, 풍부한 생태계
+const Button = styled.button.attrs((props) => ({
+  type: props.type || "button",
+}))`
+  padding: 1rem;
+  background: ${(props) => (props.primary ? "blue" : "gray")};
+`;
+
+// 상속도 쉬움
+const PrimaryButton = styled(Button)`
+  background: blue;
+`;
+```
+
+#### emotion
+
+```jsx
+/** @jsxImportSource @emotion/react */
+import { css } from "@emotion/react";
+
+// CSS prop 방식 (더 직관적)
+const App = () => (
+  <div
+    css={css`
+      color: red;
+      &:hover {
+        color: blue;
+      }
+    `}
+  >
+    Hello World
+  </div>
+);
+
+// styled 방식도 지원
+import styled from "@emotion/styled";
+const Button = styled.button`
+  color: red;
+`;
+```
+
+#### stitches
+
+```jsx
+import { styled } from "@stitches/react";
+
+// TypeScript 친화적, 높은 성능
+const Button = styled("button", {
+  // 기본 스타일
+  padding: "$2",
+
+  variants: {
+    color: {
+      primary: { backgroundColor: "$blue9" },
+      secondary: { backgroundColor: "$gray9" },
+    },
+    size: {
+      small: { fontSize: "$1" },
+      large: { fontSize: "$3" },
+    },
+  },
+});
+
+// 사용
+<Button color="primary" size="large">
+  버튼
+</Button>;
+```
+
+<Callout type="info" title="CSS-in-JS 선택 가이드">
+
+**styled-components 선택 시기:**
+
+- React 생태계에 깊이 통합하고 싶을 때
+- 풍부한 커뮤니티와 플러그인이 필요할 때
+- 기존 프로젝트에서 널리 사용되고 있을 때
+
+**emotion 선택 시기:**
+
+- css prop으로 더 유연하게 작업하고 싶을 때
+- 성능이 중요한 프로젝트일 때
+- styled-components보다 작은 번들 크기를 원할 때
+
+**stitches 선택 시기:**
+
+- TypeScript 프로젝트일 때
+- 최고의 런타임 성능이 필요할 때
+- 디자인 시스템 구축이 주 목적일 때
+
+**사용하지 않는 것이 좋은 경우:**
+
+- 정적인 스타일이 대부분인 프로젝트
+- SSR이 복잡하게 느껴지는 팀
+- 번들 크기와 성능이 매우 중요한 프로젝트
+
+</Callout>
+
+### 성능 최적화 팁
+
+```jsx
+// 1. 정적 스타일과 동적 스타일 분리
+const StaticStyles = styled.div`
+  /* 변하지 않는 스타일 */
+  display: flex;
+  align-items: center;
+  padding: 1rem;
+`;
+
+const DynamicStyles = styled(StaticStyles)`
+  /* 변하는 스타일만 */
+  color: ${(props) => props.color};
+`;
+
+// 2. shouldForwardProp 사용으로 불필요한 props 전달 방지
+const Button = styled.button.withConfig({
+  shouldForwardProp: (prop, defaultValidatorFn) =>
+    !["color", "size"].includes(prop) && defaultValidatorFn(prop),
+})`
+  color: ${(props) => props.color};
+`;
+
+// 3. 컴파일 타임 최적화 (babel 플러그인)
+// babel.config.js
+module.exports = {
+  plugins: [
+    [
+      "styled-components",
+      {
+        displayName: true, // 개발 시 디버깅 도움
+        ssr: true, // SSR 최적화
+        preprocess: false, // 런타임 최적화
+      },
+    ],
+  ],
+};
+```
