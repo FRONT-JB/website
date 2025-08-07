@@ -1,0 +1,353 @@
+---
+title: "Nextjs15에서의 캐싱 기법"
+description: "Nextjs15에서의 캐싱 기법은 어떤게 있나요?"
+---
+
+## Nextjs15에서의 캐싱 기법은 어떤게 있나요?
+
+Next.js 15는 다양한 **캐싱 레이어**를 제공하여 애플리케이션의 성능을 크게 향상시킵니다. App Router에서는 더욱 세밀하고 강력한 캐싱 전략을 제공합니다.
+
+<Callout type="info" title="Next.js 15 캐싱 레이어 개요">
+
+Next.js는 4개의 주요 캐싱 레이어를 제공합니다:
+
+1. **Request Memoization**: 동일한 요청의 중복 제거
+2. **Data Cache**: 서버 사이드 데이터 캐싱
+3. **Full Route Cache**: 전체 라우트 캐싱
+4. **Router Cache**: 클라이언트 사이드 라우트 캐싱
+
+</Callout>
+
+### 1. Data Cache (데이터 캐시)
+
+서버에서 데이터 fetch 결과를 캐싱합니다:
+
+```tsx
+// 기본 캐싱 (무한대)
+async function getData() {
+  const res = await fetch("https://api.example.com/data");
+  return res.json();
+}
+
+// 시간 기반 재검증 (ISR - Incremental Static Regeneration)
+async function getDataWithRevalidate() {
+  const res = await fetch("https://api.example.com/data", {
+    next: { revalidate: 60 }, // 60초마다 재검증
+  });
+  return res.json();
+}
+
+// 태그 기반 재검증
+async function getDataWithTags() {
+  const res = await fetch("https://api.example.com/data", {
+    next: { tags: ["products"] },
+  });
+  return res.json();
+}
+
+// 캐시 비활성화
+async function getDataNoCache() {
+  const res = await fetch("https://api.example.com/data", {
+    cache: "no-store", // 캐시하지 않음
+  });
+  return res.json();
+}
+```
+
+### 2. Full Route Cache (전체 라우트 캐싱)
+
+정적 라우트와 동적 라우트의 캐싱:
+
+```tsx
+// app/products/page.tsx
+// 정적 라우트 - 빌드 시 사전 렌더링되고 캐시됨
+export default async function ProductsPage() {
+  const products = await fetch("https://api.example.com/products", {
+    next: { revalidate: 3600 }, // 1시간마다 재검증
+  });
+
+  return (
+    <div>
+      {products.map((product) => (
+        <ProductCard key={product.id} product={product} />
+      ))}
+    </div>
+  );
+}
+
+// 동적 세그먼트가 있는 경우
+// app/products/[id]/page.tsx
+export default async function ProductPage({
+  params,
+}: {
+  params: { id: string };
+}) {
+  const product = await fetch(`https://api.example.com/products/${params.id}`, {
+    next: { revalidate: 300 }, // 5분마다 재검증
+  });
+
+  return <ProductDetail product={product} />;
+}
+
+// generateStaticParams로 정적 생성할 경로 지정
+export async function generateStaticParams() {
+  const products = await fetch("https://api.example.com/products").then((res) =>
+    res.json(),
+  );
+
+  return products.map((product: any) => ({
+    id: product.id.toString(),
+  }));
+}
+```
+
+### 3. Router Cache (라우터 캐시)
+
+클라이언트 사이드에서 방문한 라우트들을 캐싱:
+
+```tsx
+"use client";
+
+import { useRouter } from "next/navigation";
+
+function Navigation() {
+  const router = useRouter();
+
+  const handleNavigation = () => {
+    // 이미 방문한 라우트는 캐시에서 즉시 로드
+    router.push("/dashboard");
+
+    // 프리페치로 미리 캐시에 저장
+    router.prefetch("/profile");
+  };
+
+  return (
+    <nav>
+      <button onClick={handleNavigation}>대시보드로 이동</button>
+    </nav>
+  );
+}
+```
+
+### 4. Request Memoization (요청 메모이제이션)
+
+동일한 요청의 중복을 제거:
+
+```tsx
+// 이 함수가 여러 컴포넌트에서 호출되어도 실제로는 한 번만 실행됨
+async function getUser(id: string) {
+  const res = await fetch(`https://api.example.com/users/${id}`);
+  return res.json();
+}
+
+// 여러 컴포넌트에서 같은 사용자 데이터를 요청
+async function UserProfile({ userId }: { userId: string }) {
+  const user = await getUser(userId); // 첫 번째 호출
+  return <div>{user.name}</div>;
+}
+
+async function UserPosts({ userId }: { userId: string }) {
+  const user = await getUser(userId); // 메모이제이션된 결과 반환
+  const posts = await getUserPosts(userId);
+  return <div>Posts by {user.name}</div>;
+}
+```
+
+### 5. 캐시 무효화 전략
+
+#### 태그 기반 재검증
+
+```tsx
+// app/actions.ts
+import { revalidateTag, revalidatePath } from "next/cache";
+
+export async function createProduct(formData: FormData) {
+  const newProduct = await fetch("https://api.example.com/products", {
+    method: "POST",
+    body: formData,
+  });
+
+  // products 태그가 달린 모든 캐시 무효화
+  revalidateTag("products");
+
+  // 특정 경로의 캐시 무효화
+  revalidatePath("/products");
+
+  return newProduct;
+}
+
+// 태그가 달린 데이터 fetch
+async function getProducts() {
+  const res = await fetch("https://api.example.com/products", {
+    next: { tags: ["products"] },
+  });
+  return res.json();
+}
+```
+
+#### 경로 기반 재검증
+
+```tsx
+import { revalidatePath } from "next/cache";
+
+export async function updateUserProfile(userId: string, data: any) {
+  await fetch(`https://api.example.com/users/${userId}`, {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+
+  // 특정 사용자 프로필 페이지만 재검증
+  revalidatePath(`/users/${userId}`);
+
+  // 모든 사용자 관련 페이지 재검증
+  revalidatePath("/users", "layout");
+}
+```
+
+<Callout type="error" title="캐시 무효화 시 주의사항">
+
+1. **Server Actions에서만 사용 가능**: `revalidateTag`와 `revalidatePath`는 Server Actions 또는 API Routes에서만 사용 가능
+2. **과도한 무효화 방지**: 너무 자주 캐시를 무효화하면 성능 이점이 사라짐
+3. **의존성 고려**: 연관된 데이터들의 캐시도 함께 무효화해야 함
+
+</Callout>
+
+### 6. 동적 라우트 캐싱 최적화
+
+```tsx
+// app/products/[category]/[id]/page.tsx
+export default async function ProductPage({
+  params,
+}: {
+  params: { category: string; id: string };
+}) {
+  // 카테고리별로 다른 캐시 전략 적용
+  const revalidateTime = params.category === "electronics" ? 300 : 3600;
+
+  const product = await fetch(
+    `https://api.example.com/products/${params.category}/${params.id}`,
+    {
+      next: { revalidate: revalidateTime, tags: [`product-${params.id}`] },
+    },
+  );
+
+  return <ProductDetail product={product} />;
+}
+
+// 특정 카테고리의 인기 상품들만 정적 생성
+export async function generateStaticParams() {
+  const popularProducts = await fetch(
+    "https://api.example.com/products/popular",
+  ).then((res) => res.json());
+
+  return popularProducts.map((product: any) => ({
+    category: product.category,
+    id: product.id.toString(),
+  }));
+}
+```
+
+### 7. API Routes 캐싱
+
+```tsx
+// app/api/products/route.ts
+import { NextRequest } from "next/server";
+
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const category = searchParams.get("category");
+
+  const products = await fetch("https://api.example.com/products", {
+    next: {
+      revalidate: 300,
+      tags: ["products", `category-${category}`],
+    },
+  });
+
+  return Response.json(products, {
+    headers: {
+      "Cache-Control": "public, max-age=60, stale-while-revalidate=300",
+    },
+  });
+}
+```
+
+### 8. 캐시 성능 모니터링
+
+```tsx
+// 캐시 히트/미스 확인을 위한 커스텀 훅
+function useCacheStats() {
+  useEffect(() => {
+    // Next.js 개발 모드에서 캐시 상태 확인
+    if (process.env.NODE_ENV === "development") {
+      const observer = new PerformanceObserver((list) => {
+        list.getEntries().forEach((entry) => {
+          if (entry.name.includes("cache")) {
+            console.log("Cache performance:", entry);
+          }
+        });
+      });
+
+      observer.observe({ entryTypes: ["navigation", "resource"] });
+
+      return () => observer.disconnect();
+    }
+  }, []);
+}
+```
+
+### 9. 고급 캐싱 패턴
+
+#### 조건부 캐싱
+
+```tsx
+async function getDataWithConditionalCache(userId: string) {
+  const isVipUser = await checkVipStatus(userId);
+
+  const cacheConfig = isVipUser
+    ? { revalidate: 60 } // VIP 사용자는 더 자주 업데이트
+    : { revalidate: 3600 }; // 일반 사용자는 1시간
+
+  const data = await fetch(`https://api.example.com/data/${userId}`, {
+    next: cacheConfig,
+  });
+
+  return data.json();
+}
+```
+
+#### 계층적 캐싱
+
+```tsx
+// 전역 데이터 (오래 캐시)
+async function getGlobalConfig() {
+  return fetch("https://api.example.com/config", {
+    next: { revalidate: 86400 }, // 24시간
+  });
+}
+
+// 사용자별 데이터 (중간 캐시)
+async function getUserData(userId: string) {
+  return fetch(`https://api.example.com/users/${userId}`, {
+    next: { revalidate: 3600 }, // 1시간
+  });
+}
+
+// 실시간 데이터 (짧은 캐시)
+async function getLiveData() {
+  return fetch("https://api.example.com/live", {
+    next: { revalidate: 30 }, // 30초
+  });
+}
+```
+
+<Callout type="info" title="캐싱 베스트 프랙티스">
+
+1. **적절한 revalidate 시간 설정**: 데이터 성격에 맞는 캐시 만료 시간 설정
+2. **태그 기반 무효화 활용**: 관련 데이터가 변경될 때 선택적 캐시 무효화
+3. **캐시 계층화**: 데이터의 변경 빈도에 따른 다층 캐시 전략
+4. **모니터링**: 캐시 히트율과 성능 지표 지속적 모니터링
+
+</Callout>
+
+Next.js 15의 캐싱 시스템을 적절히 활용하면 애플리케이션의 성능을 크게 향상시킬 수 있습니다.

@@ -1,0 +1,166 @@
+---
+title: "React.memo와 useMemo"
+description: "React.memo와 useMemo의 차이"
+---
+
+## React.memo와 useMemo의 차이는 무엇인가요?
+
+React의 `memo`와 `useMemo`는 모두 **메모이제이션**을 통한 성능 최적화 기법이지만, 사용 목적과 최적화하는 대상이 다릅니다.
+
+<Callout type="info" title="메모이제이션이란?">
+
+메모이제이션은 이전에 계산한 값을 저장해두고, 같은 입력이 들어왔을 때 다시 계산하지 않고 저장된 값을 재사용하는 최적화 기법입니다.
+
+</Callout>
+
+### React.memo - 컴포넌트 렌더링 최적화
+
+`React.memo`는 **컴포넌트 전체의 리렌더링을 방지**하는 고차 컴포넌트(HOC)입니다.
+
+```jsx
+// 기본 사용법
+const ExpensiveComponent = React.memo(({ name, age }) => {
+  console.log("ExpensiveComponent 렌더링!");
+  return (
+    <div>
+      <p>이름: {name}</p>
+      <p>나이: {age}</p>
+    </div>
+  );
+});
+
+// 사용 예시
+function App() {
+  const [count, setCount] = useState(0);
+  const [userInfo, setUserInfo] = useState({ name: "John", age: 30 });
+
+  return (
+    <div>
+      <button onClick={() => setCount(count + 1)}>Count: {count}</button>
+      {/* userInfo가 변경되지 않으면 ExpensiveComponent는 리렌더링되지 않음 */}
+      <ExpensiveComponent name={userInfo.name} age={userInfo.age} />
+    </div>
+  );
+}
+```
+
+#### 커스텀 비교 함수 사용
+
+```jsx
+const MyComponent = React.memo(
+  (props) => {
+    return <div>{props.user.name}</div>;
+  },
+  (prevProps, nextProps) => {
+    // true를 반환하면 리렌더링하지 않음, false를 반환하면 리렌더링
+    return prevProps.user.id === nextProps.user.id;
+  },
+);
+```
+
+### useMemo - 값 계산 최적화
+
+`useMemo`는 **값의 재계산을 방지**하는 훅입니다. 의존성 배열의 값이 변경되지 않으면 이전에 계산된 값을 재사용합니다.
+
+```jsx
+function ExpensiveCalculationComponent({ items, multiplier }) {
+  // 복잡한 계산 결과를 메모이제이션
+  const expensiveValue = useMemo(() => {
+    console.log("복잡한 계산 실행!");
+    return items.reduce((sum, item) => sum + item.value * multiplier, 0);
+  }, [items, multiplier]); // items나 multiplier가 변경될 때만 재계산
+
+  // 참조 동등성을 위한 객체 메모이제이션
+  const config = useMemo(
+    () => ({
+      theme: "dark",
+      locale: "ko-KR",
+    }),
+    [],
+  ); // 빈 배열이므로 컴포넌트 생명주기 동안 항상 같은 객체
+
+  return (
+    <div>
+      <p>계산 결과: {expensiveValue}</p>
+      <ChildComponent config={config} />
+    </div>
+  );
+}
+```
+
+<Callout type="error" title="언제 사용하지 말아야 할까?">
+
+1. **간단한 계산**: 복잡하지 않은 계산에는 useMemo의 오버헤드가 더 클 수 있습니다.
+2. **의존성이 자주 변경**: 의존성 배열의 값이 자주 변경되면 메모이제이션 효과가 없습니다.
+3. **모든 컴포넌트에 memo 적용**: 필요하지 않은 곳에 사용하면 메모리 사용량만 증가합니다.
+
+</Callout>
+
+### 핵심 차이점 비교
+
+| 항목            | React.memo              | useMemo             |
+| --------------- | ----------------------- | ------------------- |
+| **최적화 대상** | 컴포넌트 리렌더링       | 값의 재계산         |
+| **사용 위치**   | 컴포넌트를 감싸는 HOC   | 컴포넌트 내부 훅    |
+| **반환값**      | 메모이제이션된 컴포넌트 | 메모이제이션된 값   |
+| **비교 기준**   | props 얕은 비교         | 의존성 배열 값 비교 |
+
+### 실제 사용 예시
+
+```jsx
+// 함께 사용하는 예시
+const ProductList = React.memo(({ products, searchTerm }) => {
+  // 검색 결과 계산을 메모이제이션
+  const filteredProducts = useMemo(() => {
+    console.log("필터링 실행!");
+    return products.filter((product) =>
+      product.name.toLowerCase().includes(searchTerm.toLowerCase()),
+    );
+  }, [products, searchTerm]);
+
+  // 정렬된 결과를 메모이제이션
+  const sortedProducts = useMemo(() => {
+    console.log("정렬 실행!");
+    return [...filteredProducts].sort((a, b) => a.price - b.price);
+  }, [filteredProducts]);
+
+  return (
+    <div>
+      {sortedProducts.map((product) => (
+        <ProductItem key={product.id} product={product} />
+      ))}
+    </div>
+  );
+});
+
+// 부모 컴포넌트에서 사용
+function App() {
+  const [products, setProducts] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [otherState, setOtherState] = useState(0);
+
+  return (
+    <div>
+      <input
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+        placeholder="상품 검색..."
+      />
+      <button onClick={() => setOtherState((prev) => prev + 1)}>
+        Other State: {otherState}
+      </button>
+      {/* otherState가 변경되어도 ProductList는 리렌더링되지 않음 */}
+      <ProductList products={products} searchTerm={searchTerm} />
+    </div>
+  );
+}
+```
+
+<Callout type="info" title="성능 최적화 팁">
+
+1. **React.memo**: props가 자주 변경되지 않는 컴포넌트에 사용
+2. **useMemo**: 복잡한 계산이나 참조 동등성이 중요한 객체/배열에 사용
+3. **useCallback**: 자식 컴포넌트에 전달되는 함수에 사용
+4. **측정 우선**: React DevTools Profiler로 실제 성능 문제를 확인 후 최적화 적용
+
+</Callout>

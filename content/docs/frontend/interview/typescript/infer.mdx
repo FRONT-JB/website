@@ -1,6 +1,6 @@
 ---
-title: "TypeScript"
-description: "TypeScript 관련 기술면접 질문과 답변"
+title: "infer"
+description: "TypeScript의 infer 키워드"
 ---
 
 ## Typescript에서 infer는 어떻게 동작하나요?
@@ -124,8 +124,8 @@ type ChainReturnTypes<T> = T extends (...args: any[]) => infer R
 // 예시 함수들
 const chain = () => ({
   step1: () => ({
-    step2: () => "final result"
-  })
+    step2: () => "final result",
+  }),
 });
 
 type ChainTypes = ChainReturnTypes<typeof chain>;
@@ -135,18 +135,18 @@ type ChainTypes = ChainReturnTypes<typeof chain>;
 
 ```typescript
 // API 응답 타입에서 데이터 추출
-type ApiResponse<T> = {
-  success: true;
-  data: T;
-} | {
-  success: false;
-  error: string;
-};
+type ApiResponse<T> =
+  | {
+      success: true;
+      data: T;
+    }
+  | {
+      success: false;
+      error: string;
+    };
 
 // 성공한 API 응답에서 데이터 타입 추출
-type ExtractApiData<T> = T extends { success: true; data: infer D }
-  ? D
-  : never;
+type ExtractApiData<T> = T extends { success: true; data: infer D } ? D : never;
 
 type UserApiResponse = ApiResponse<User>;
 type UserData = ExtractApiData<UserApiResponse>; // User
@@ -172,7 +172,7 @@ type RestChars = Tail<"Hello">; // "ello"
 // 배열을 튜플로 변환하는 재귀 타입
 type ArrayToTuple<T extends readonly unknown[]> = T extends readonly [
   infer First,
-  ...infer Rest
+  ...infer Rest,
 ]
   ? [First, ...ArrayToTuple<Rest>]
   : [];
@@ -192,11 +192,11 @@ type ExtractPayload<T> = T extends { type: string; payload: infer P }
   : never;
 
 interface LoginAction {
-  type: 'LOGIN';
+  type: "LOGIN";
   payload: { username: string; token: string };
 }
 
-type LoginPayload = ExtractPayload<LoginAction>; 
+type LoginPayload = ExtractPayload<LoginAction>;
 // { username: string; token: string }
 ```
 
@@ -237,7 +237,7 @@ type IsPromise<T> = T extends Promise<any> ? true : false;
 
 // 타입 체크 예시
 type FnCheck = IsFunction<() => void>; // true
-type ArrCheck = IsArray<string[]>; // true  
+type ArrCheck = IsArray<string[]>; // true
 type PromiseCheck = IsPromise<Promise<number>>; // true
 ```
 
