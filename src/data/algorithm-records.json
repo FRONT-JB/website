@@ -1,5 +1,46 @@
 [
   {
+    "date": "2025.08.07",
+    "problems": [
+      {
+        "title": "문자열의 앞의 n글자",
+        "platform": "프로그래머스",
+        "link": "https://school.programmers.co.kr/learn/courses/30/lessons/181907",
+        "tags": ["문자열"]
+      },
+      {
+        "title": "A 강조하기",
+        "platform": "프로그래머스",
+        "link": "https://school.programmers.co.kr/learn/courses/30/lessons/181874",
+        "tags": ["문자열"]
+      },
+      {
+        "title": "특정한 문자를 대문자로 바꾸기",
+        "platform": "프로그래머스",
+        "link": "https://school.programmers.co.kr/learn/courses/30/lessons/181873",
+        "tags": ["문자열"]
+      },
+      {
+        "title": "조건에 맞게 수열 변환하기 3",
+        "platform": "프로그래머스",
+        "link": "https://school.programmers.co.kr/learn/courses/30/lessons/181835",
+        "tags": ["반복문"]
+      },
+      {
+        "title": "l로 만들기",
+        "platform": "프로그래머스",
+        "link": "https://school.programmers.co.kr/learn/courses/30/lessons/181834",
+        "tags": ["반복문"]
+      },
+      {
+        "title": "문자열 바꿔서 찾기",
+        "platform": "프로그래머스",
+        "link": "https://school.programmers.co.kr/learn/courses/30/lessons/181864",
+        "tags": ["문자열"]
+      }
+    ]
+  },
+  {
     "date": "2025.08.06",
     "problems": [
       {
