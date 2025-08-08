@@ -1,5 +1,40 @@
 [
   {
+    "date": "2025.08.08",
+    "problems": [
+      {
+        "title": "정수 찾기",
+        "platform": "프로그래머스",
+        "link": "https://school.programmers.co.kr/learn/courses/30/lessons/181840",
+        "tags": ["조건문"]
+      },
+      {
+        "title": "배열의 원소 삭제하기",
+        "platform": "프로그래머스",
+        "link": "https://school.programmers.co.kr/learn/courses/30/lessons/181844",
+        "tags": ["조건문"]
+      },
+      {
+        "title": "꼬리 문자열",
+        "platform": "프로그래머스",
+        "link": "https://school.programmers.co.kr/learn/courses/30/lessons/181841",
+        "tags": ["조건문"]
+      },
+      {
+        "title": "0 떼기",
+        "platform": "프로그래머스",
+        "link": "https://school.programmers.co.kr/learn/courses/30/lessons/181847",
+        "tags": ["메서드"]
+      },
+      {
+        "title": "부분 문자열",
+        "platform": "프로그래머스",
+        "link": "https://school.programmers.co.kr/learn/courses/30/lessons/181842",
+        "tags": ["조건문"]
+      }
+    ]
+  },
+  {
     "date": "2025.08.07",
     "problems": [
       {
