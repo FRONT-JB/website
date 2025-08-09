@@ -24,11 +24,11 @@ description: TIL 파일 생성 및 내용 자동 작성
 
 #### 3-1. src/data/algorithm-records.json 변경사항이 있는 경우
 
-- `content/docs/2025/0727.mdx` 파일의 형식을 참조하여 알고리즘 학습 내용을 요약해서 기록합니다.
+- `content/docs/2025/archive/0727.mdx` 파일의 형식을 참조하여 알고리즘 학습 내용을 요약해서 기록합니다.
 
 #### 3-2. content/blog, content/docs 폴더 변경사항이 있는 경우
 
-- `content/docs/2025/0726.mdx` 파일의 형식을 참조하여 학습 내용을 요약해서 기록합니다.
+- `content/docs/2025/archive/0726.mdx` 파일의 형식을 참조하여 학습 내용을 요약해서 기록합니다.
 
 #### 3-3. content/\*\*, src/data/algorithm-records.json 둘 다 변경사항이 있는 경우
 
