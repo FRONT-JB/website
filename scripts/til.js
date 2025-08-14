@@ -78,7 +78,7 @@ description: "${year}년 ${month}월 ${dayWithoutPadding}일에 기록한 내용
     problems.forEach((problem, index) => {
       content += `### ${index + 1}. ${problem.title}
 
-- **문제 링크**: ${problem.link}
+- [문제링크](${problem.link})
 - **핵심**: 
 - **학습 포인트**: 
 - **태그**: ${problem.tags.join(', ')}
