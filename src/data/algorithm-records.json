@@ -1,5 +1,46 @@
 [
   {
+    "date": "2025.08.14",
+    "problems": [
+      {
+        "title": "rny_string",
+        "platform": "프로그래머스",
+        "link": "https://school.programmers.co.kr/learn/courses/30/lessons/181863",
+        "tags": ["문자열"]
+      },
+      {
+        "title": "공백으로 구분하기 1",
+        "platform": "프로그래머스",
+        "link": "https://school.programmers.co.kr/learn/courses/30/lessons/181869",
+        "tags": ["문자열"]
+      },
+      {
+        "title": "배열에서 문자열 대소문자 변환하기",
+        "platform": "프로그래머스",
+        "link": "https://school.programmers.co.kr/learn/courses/30/lessons/181875",
+        "tags": ["문자열"]
+      },
+      {
+        "title": "간단한 식 계산하기",
+        "platform": "프로그래머스",
+        "link": "https://school.programmers.co.kr/learn/courses/30/lessons/181865",
+        "tags": ["문자열"]
+      },
+      {
+        "title": "소문자로 바꾸기",
+        "platform": "프로그래머스",
+        "link": "https://school.programmers.co.kr/learn/courses/30/lessons/181876",
+        "tags": ["문자열"]
+      },
+      {
+        "title": "가까운 1 찾기",
+        "platform": "프로그래머스",
+        "link": "https://school.programmers.co.kr/learn/courses/30/lessons/181898",
+        "tags": ["배열"]
+      }
+    ]
+  },
+  {
     "date": "2025.08.12",
     "problems": [
       {
