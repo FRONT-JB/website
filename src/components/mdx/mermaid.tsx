@@ -3,7 +3,6 @@
 import { use, useEffect, useState } from "react";
 import { useTheme } from "next-themes";
 import { nanoid } from "nanoid";
-import { useRouter } from "next/navigation";
 
 export function Mermaid({ chart }: { chart: string }) {
   const [mounted, setMounted] = useState(false);
@@ -37,23 +36,19 @@ function MermaidContent({ chart }: { chart: string }) {
     cachePromise("mermaid", () => import("mermaid")),
   );
 
+  mermaid.initialize({
+    startOnLoad: false,
+    securityLevel: "loose",
+    fontFamily: "inherit",
+    themeCSS: "margin: 1.5rem auto 0;",
+    theme: resolvedTheme === "dark" ? "base" : "default",
+  });
+
   const { svg, bindFunctions } = use(
     cachePromise(`${chart}-${resolvedTheme}`, () => {
       return mermaid.render(mermaidId, chart.replaceAll("\\n", "\n"));
     }),
   );
-
-  useEffect(() => {
-    console.log(resolvedTheme);
-
-    mermaid.initialize({
-      startOnLoad: false,
-      securityLevel: "loose",
-      fontFamily: "inherit",
-      themeCSS: "margin: 1.5rem auto 0;",
-      theme: resolvedTheme === "dark" ? "base" : "default",
-    });
-  }, [resolvedTheme]);
 
   return (
     <div
