@@ -1,0 +1,281 @@
+---
+title: "실행 컨텍스트와 이벤트 루프"
+description: "실행 컨텍스트와 이벤트 루프를 통한 비동기 처리과정이 어떻게 되나요?"
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+<Callout type="info">
+**중요도: ⭐⭐⭐⭐⭐**
+
+JavaScript 실행 메커니즘의 핵심으로, 비동기 이해에 필수적인 개념입니다.
+
+</Callout>
+
+# 실행 컨텍스트와 이벤트 루프
+
+JavaScript의 **실행 컨텍스트(Execution Context)** 와 **이벤트 루프(Event Loop)** 는 비동기 코드가 어떻게 실행되는지를 이해하는 핵심 개념입니다.
+
+### JavaScript 실행 환경의 구조
+
+```
+┌─────────────────────────────────────────────┐
+│              JavaScript Engine              │
+│  ┌─────────────┐  ┌───────────────────────┐ │
+│  │ Call Stack  │  │     Memory Heap       │ │
+│  └─────────────┘  └───────────────────────┘ │
+└─────────────────────────────────────────────┘
+                     │
+                     ▼
+┌─────────────────────────────────────────────┐
+│            Web APIs / Node.js APIs          │
+│  • DOM APIs        • File System            │
+│  • setTimeout      • HTTP                   │
+│  • fetch           • Crypto                 │
+│  • Promise         • Process                │
+└─────────────────────────────────────────────┘
+                     │
+                     ▼
+┌─────────────────────────────────────────────┐
+│              Event Loop                     │
+│  ┌─────────────┐  ┌───────────────────────┐ │
+│  │ Microtask   │  │     Macrotask         │ │
+│  │ Queue       │  │     Queue             │ │
+│  │ (Promise)   │  │ (setTimeout, events)  │ │
+│  └─────────────┘  └───────────────────────┘ │
+└─────────────────────────────────────────────┘
+```
+
+### 실행 컨텍스트의 생성과 실행
+
+```javascript
+// 1. 글로벌 실행 컨텍스트 생성
+var globalVar = "global";
+
+function outerFunction(x) {
+  // 2. outerFunction 실행 컨텍스트 생성
+  var outerVar = "outer";
+
+  function innerFunction(y) {
+    // 3. innerFunction 실행 컨텍스트 생성
+    var innerVar = "inner";
+    console.log(globalVar, outerVar, innerVar, x, y);
+  }
+
+  innerFunction("y");
+}
+
+outerFunction("x");
+```
+
+**Call Stack 동작 순서:**
+
+1. Global Execution Context → Call Stack에 푸시
+2. outerFunction() → Call Stack에 푸시
+3. innerFunction() → Call Stack에 푸시
+4. console.log() → Call Stack에 푸시 & 실행 & 팝
+5. innerFunction → 실행 완료 & 팝
+6. outerFunction → 실행 완료 & 팝
+7. Global Context → 프로그램 종료 시 팝
+
+### 이벤트 루프와 비동기 처리
+
+```javascript
+console.log("1. 동기 코드 시작");
+
+// 매크로태스크 (Macrotask)
+setTimeout(() => {
+  console.log("4. setTimeout (매크로태스크)");
+}, 0);
+
+// 마이크로태스크 (Microtask)
+Promise.resolve().then(() => {
+  console.log("3. Promise (마이크로태스크)");
+});
+
+console.log("2. 동기 코드 끝");
+
+// 실행 순서: 1 → 2 → 3 → 4
+```
+
+### 상세한 이벤트 루프 동작 과정
+
+<Callout type="info" title="이벤트 루프 처리 순서">
+
+1. **Call Stack 실행**: 동기 코드를 모두 실행
+2. **Microtask Queue 처리**: Promise, queueMicrotask 등
+3. **UI 렌더링** (브라우저 환경)
+4. **Macrotask Queue 처리**: setTimeout, setInterval, DOM 이벤트 등
+
+</Callout>
+
+### 실제 복잡한 예시
+
+```javascript
+async function complexAsyncExample() {
+  console.log("1. 함수 시작");
+
+  // 동기 코드
+  console.log("2. 동기 코드");
+
+  // Promise 체인
+  Promise.resolve()
+    .then(() => console.log("5. 첫 번째 마이크로태스크"))
+    .then(() => console.log("7. 두 번째 마이크로태스크"));
+
+  // setTimeout (매크로태스크)
+  setTimeout(() => console.log("9. setTimeout"), 0);
+
+  // async/await
+  const result = await fetch("/api/data"); // 네트워크 요청
+  console.log("6. await 이후"); // 마이크로태스크로 처리
+
+  // 즉시 실행되는 마이크로태스크
+  queueMicrotask(() => console.log("8. queueMicrotask"));
+
+  console.log("3. 함수 끝");
+}
+
+console.log("0. 전역 시작");
+complexAsyncExample();
+console.log("4. 전역 끝");
+```
+
+### 마이크로태스크 vs 매크로태스크
+
+| 분류          | 마이크로태스크 (Microtask)                | 매크로태스크 (Macrotask)            |
+| ------------- | ----------------------------------------- | ----------------------------------- |
+| **우선순위**  | 높음                                      | 낮음                                |
+| **처리 시점** | 현재 실행 스택이 비워진 직후              | 마이크로태스크 큐가 비워진 후       |
+| **예시**      | Promise, queueMicrotask, MutationObserver | setTimeout, setInterval, DOM 이벤트 |
+
+### 실제 개발에서의 활용
+
+#### Promise와 async/await의 실행 순서
+
+```javascript
+async function promiseExample() {
+  console.log("A"); // 동기
+
+  const promise1 = new Promise((resolve) => {
+    console.log("B"); // 동기 (Promise 생성자는 즉시 실행)
+    resolve("resolved");
+  });
+
+  console.log("C"); // 동기
+
+  promise1.then((result) => {
+    console.log("D", result); // 마이크로태스크
+  });
+
+  const result = await Promise.resolve("await result");
+  console.log("E", result); // 마이크로태스크
+
+  console.log("F"); // await 이후 코드도 마이크로태스크
+}
+
+// 실행 순서: A → B → C → D → E → F
+```
+
+#### 이벤트 루프를 이용한 성능 최적화
+
+```javascript
+// 🚫 Bad: 동기적으로 대량 데이터 처리 (UI 블로킹)
+function processLargeDataSync(data) {
+  for (let i = 0; i < data.length; i++) {
+    // 무거운 연산
+    processItem(data[i]);
+  }
+}
+
+// ✅ Good: 비동기적으로 청크 단위 처리 (UI 블로킹 방지)
+async function processLargeDataAsync(data, chunkSize = 1000) {
+  for (let i = 0; i < data.length; i += chunkSize) {
+    const chunk = data.slice(i, i + chunkSize);
+
+    // 청크 처리
+    chunk.forEach((item) => processItem(item));
+
+    // 다음 이벤트 루프 사이클로 양보
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  }
+}
+```
+
+### React와 이벤트 루프
+
+```javascript
+function ReactAsyncExample() {
+  const [count, setCount] = useState(0);
+
+  const handleClick = async () => {
+    console.log("1. 클릭 핸들러 시작");
+
+    // 동기적 상태 업데이트 (배치됨)
+    setCount((prev) => prev + 1);
+    setCount((prev) => prev + 1);
+
+    console.log("2. 상태 업데이트 호출 완료");
+
+    // 마이크로태스크
+    Promise.resolve().then(() => {
+      console.log("4. Promise resolved");
+    });
+
+    // 매크로태스크
+    setTimeout(() => {
+      console.log("5. setTimeout executed");
+    }, 0);
+
+    console.log("3. 핸들러 끝");
+
+    // React 렌더링은 별도 스케줄링으로 처리됨
+  };
+
+  return <button onClick={handleClick}>Count: {count}</button>;
+}
+```
+
+<Callout type="info" title="디버깅 팁">
+
+1. **브라우저 개발자 도구**: Call Stack, Event Listeners 탭 활용
+2. **console.trace()**: 호출 스택 추적
+3. **Performance 탭**: 이벤트 루프 병목 지점 찾기
+4. **React DevTools Profiler**: React 렌더링과 이벤트 루프 상관관계 분석
+
+</Callout>
+
+### 메모리 관리와 실행 컨텍스트
+
+```javascript
+function memoryExample() {
+  let largeData = new Array(1000000).fill("data");
+
+  // 클로저로 인한 메모리 누수 위험
+  return function () {
+    // largeData를 참조하므로 GC되지 않음
+    return largeData.length;
+  };
+}
+
+// 해결책: 명시적 정리
+function betterMemoryExample() {
+  let largeData = new Array(1000000).fill("data");
+
+  return {
+    getLength() {
+      return largeData?.length || 0;
+    },
+    cleanup() {
+      largeData = null; // 메모리 해제
+    },
+  };
+}
+```
+
+<Callout type="info">
+**면접 팁**
+
+실행 컨텍스트와 이벤트 루프에 대해 질문받을 때는 단순히 이론만 설명하지 말고, 실제 코드 예시를 통해 Call Stack, 마이크로태스크, 매크로태스크의 실행 순서를 설명할 수 있어야 합니다. 또한 실무에서 어떻게 성능 최적화를 했는지, 비동기 코드를 디버깅했는지 등의 경험도 함께 언급하면 좋습니다.
+
+</Callout>

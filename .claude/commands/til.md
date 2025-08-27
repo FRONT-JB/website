@@ -24,11 +24,11 @@ description: TIL 파일 생성 및 내용 자동 작성
 
 #### 3-1. src/data/algorithm-records.json 변경사항이 있는 경우
 
-- `content/docs/2025/archive/0727.mdx` 파일의 형식을 참조하여 알고리즘 학습 내용을 요약해서 기록합니다.
+- `content/docs/personal/2025/archive/0727.mdx` 파일의 형식을 참조하여 알고리즘 학습 내용을 요약해서 기록합니다.
 
 #### 3-2. content/blog, content/docs 폴더 변경사항이 있는 경우
 
-- `content/docs/2025/archive/0726.mdx` 파일의 형식을 참조하여 학습 내용을 요약해서 기록합니다.
+- `content/docs/personal/2025/archive/0726.mdx` 파일의 형식을 참조하여 학습 내용을 요약해서 기록합니다.
 
 #### 3-3. content/\*\*, src/data/algorithm-records.json 둘 다 변경사항이 있는 경우
 
@@ -58,8 +58,8 @@ description: TIL 파일 생성 및 내용 자동 작성
 6. `chore:`, `style:` 프리픽스가 달린 커밋은 분석 대상에서 제외
 7. 분석 대상 파일의 변경사항이 있고 `chore:`, `style:` 프리픽스가 없는 오늘 날짜 커밋만 선별하여 내용 분석
 8. 변경사항 유형에 따라 적절한 기존 TIL 형식을 참조하여 내용 작성:
-   - 알고리즘만: `0727.mdx` 형식
-   - 일반 학습만: `0726.mdx` 형식
+   - 알고리즘만: `content/docs/personal/2025/archive/0727.mdx` 형식
+   - 일반 학습만: `content/docs/personal/2025/archive/0726.mdx` 형식
    - 둘 다: 두 형식을 통합하여 섹션별로 구분
    - 기존 TIL에 추가: 기존 내용 유지하면서 새 섹션 추가
 9. 생성된 TIL 파일에 분석한 내용을 자동으로 채워넣음

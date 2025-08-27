@@ -1,0 +1,219 @@
+---
+title: 라이브러리와 프레임워크의 차이점
+description: 라이브러리와 프레임워크의 개념과 차이점에 대해 설명합니다.
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+<Callout type="info">
+**중요도: ⭐⭐⭐⭐⭐**
+
+개발에서 핵심적인 개념으로, 제어의 역전(IoC)을 이해하는 것이 중요합니다.
+
+</Callout>
+
+## 기본 개념
+
+### 라이브러리 (Library)
+
+<Callout type="note">
+  개발자가 필요한 기능을 선택적으로 호출하여 사용하는 코드 집합
+</Callout>
+
+#### 특징
+
+- **제어의 주도권이 개발자에게 있음**
+- 필요할 때 특정 기능을 호출해서 사용
+- 애플리케이션의 흐름을 개발자가 직접 제어
+- 부분적으로 사용 가능
+
+#### 예시
+
+- **jQuery**: DOM 조작을 위한 유틸리티 함수들
+- **Lodash**: JavaScript 유틸리티 함수 모음
+- **Axios**: HTTP 클라이언트 라이브러리
+- **Moment.js**: 날짜/시간 처리 라이브러리
+
+```javascript
+// jQuery 라이브러리 사용 예시
+// 개발자가 필요할 때 jQuery 함수를 호출
+$("#button").click(function () {
+  $("#content").hide();
+});
+
+// Lodash 라이브러리 사용 예시
+// 개발자가 필요한 함수만 선택적으로 사용
+const _ = require("lodash");
+const users = [
+  { name: "John", age: 30 },
+  { name: "Jane", age: 25 },
+];
+const sortedUsers = _.sortBy(users, "age");
+```
+
+### 프레임워크 (Framework)
+
+<Callout type="note">
+  정해진 프레임(틀) 안에서 개발자가 코드를 작성하는 구조적 기반
+</Callout>
+
+#### 특징
+
+- **제어의 주도권이 프레임워크에 있음** (제어의 역전, Inversion of Control)
+- 전체적인 흐름을 프레임워크가 제어
+- 개발자는 정해진 규칙과 구조에 따라 코드 작성
+- 전체적인 아키텍처 제공
+
+#### 예시
+
+- **React**: 컴포넌트 기반 UI 라이브러리 (엄밀히는 라이브러리지만 프레임워크적 특성도 있음)
+- **Vue**: 프로그레시브 JavaScript 프레임워크
+- **Angular**: 완전한 프론트엔드 프레임워크
+- **Express.js**: Node.js 웹 프레임워크
+- **Spring**: Java 애플리케이션 프레임워크
+
+```javascript
+// React 프레임워크 사용 예시
+// React가 컴포넌트의 생명주기와 렌더링을 제어
+function App() {
+  const [count, setCount] = useState(0);
+
+  // React가 정한 규칙에 따라 컴포넌트 작성
+  useEffect(() => {
+    document.title = `Count: ${count}`;
+  }, [count]);
+
+  return (
+    <div>
+      <p>{count}</p>
+      <button onClick={() => setCount(count + 1)}>증가</button>
+    </div>
+  );
+}
+
+// Express.js 프레임워크 사용 예시
+// Express가 정한 방식으로 라우팅과 미들웨어 구성
+const express = require("express");
+const app = express();
+
+// Express가 제공하는 구조에 맞춰 코드 작성
+app.use(express.json());
+app.get("/users", (req, res) => {
+  res.json({ users: [] });
+});
+
+app.listen(3000);
+```
+
+## 제어의 역전 (Inversion of Control, IoC)
+
+### 라이브러리 방식 (개발자가 제어)
+
+```javascript
+// 개발자가 직접 흐름을 제어
+function processData() {
+  const data = fetchData(); // 라이브러리 함수 호출
+  const validated = validateData(data); // 라이브러리 함수 호출
+  const result = transformData(validated); // 라이브러리 함수 호출
+  return result;
+}
+
+// 개발자가 언제, 어떻게 호출할지 결정
+processData();
+```
+
+### 프레임워크 방식 (프레임워크가 제어)
+
+```javascript
+// 프레임워크가 정한 구조에 맞춰 작성
+class DataProcessor {
+  // 프레임워크가 이 메서드들을 언제 호출할지 결정
+  validate(data) {
+    // 검증 로직
+  }
+
+  transform(data) {
+    // 변환 로직
+  }
+
+  process(data) {
+    // 처리 로직
+  }
+}
+
+// 프레임워크가 적절한 시점에 메서드들을 호출
+// 개발자는 호출 시점을 직접 제어하지 않음
+```
+
+## 상세 비교
+
+| 구분          | 라이브러리               | 프레임워크                             |
+| ------------- | ------------------------ | -------------------------------------- |
+| **제어권**    | 개발자                   | 프레임워크                             |
+| **호출 방식** | 개발자가 라이브러리 호출 | 프레임워크가 개발자 코드 호출          |
+| **자유도**    | 높음 (선택적 사용)       | 낮음 (구조 강제)                       |
+| **학습 곡선** | 완만                     | 가파름                                 |
+| **개발 속도** | 초기에는 빠름            | 초기에는 느리지만 규모가 커질수록 빠름 |
+| **유연성**    | 높음                     | 낮음                                   |
+| **일관성**    | 개발자에 따라 다름       | 높음                                   |
+
+## 실제 개발에서의 선택 기준
+
+### 라이브러리를 선택하는 경우
+
+- 기존 프로젝트에 특정 기능만 추가하고 싶을 때
+- 높은 자유도와 유연성이 필요할 때
+- 작은 규모의 프로젝트
+- 기존 아키텍처를 유지하고 싶을 때
+
+```javascript
+// 기존 바닐라 JS 프로젝트에 날짜 처리 기능만 추가
+import moment from "moment";
+
+function formatDate(date) {
+  return moment(date).format("YYYY-MM-DD");
+}
+```
+
+### 프레임워크를 선택하는 경우
+
+- 새로운 프로젝트를 시작할 때
+- 팀 개발에서 일관된 구조가 필요할 때
+- 대규모 애플리케이션 개발
+- 빠른 개발과 유지보수성이 중요할 때
+
+```javascript
+// 새로운 웹 애플리케이션 개발 시 Vue.js 프레임워크 사용
+<template>
+  <div id="app">
+    <router-view />
+  </div>
+</template>
+
+<script>
+export default {
+  name: 'App'
+}
+</script>
+```
+
+## 하이브리드 접근법
+
+현대의 많은 도구들은 라이브러리와 프레임워크의 경계가 모호합니다:
+
+### React의 경우
+
+- **라이브러리적 특성**: UI 렌더링에 집중, 선택적 사용 가능
+- **프레임워크적 특성**: 컴포넌트 생명주기, Hook 규칙 등 제어 구조 제공
+
+### Next.js의 경우
+
+- React(라이브러리) 위에 구축된 프레임워크
+- 파일 기반 라우팅, SSR 등 완전한 애플리케이션 구조 제공
+
+<Callout type="info">
+**면접 팁**
+
+이 질문에 답할 때는 제어의 역전(IoC) 개념을 중심으로 설명하고, 실제 사용해본 도구들을 예시로 들어 구체적으로 설명하는 것이 좋습니다. "React는 라이브러리인가 프레임워크인가?"와 같은 후속 질문도 준비해두세요.
+
+</Callout>

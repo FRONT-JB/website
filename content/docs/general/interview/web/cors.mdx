@@ -1,0 +1,438 @@
+---
+title: CORS (Cross-Origin Resource Sharing)
+description: CORS의 개념과 해결 방법에 대해 설명합니다.
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+<Callout type="info">
+**중요도: ⭐⭐⭐⭐⭐**
+
+웹 개발에서 반드시 이해해야 하는 보안 정책입니다.
+
+</Callout>
+
+## 개념
+
+CORS(Cross-Origin Resource Sharing)는 웹 페이지가 다른 도메인, 프로토콜, 포트의 리소스에 접근할 수 있도록 허용하는 메커니즘입니다.
+
+## 동일 출처 정책 (Same-Origin Policy)
+
+<Callout type="note">
+  보안상의 이유로 웹 브라우저는 동일한 출처의 리소스만 접근을 허용합니다. 출처는
+  **프로토콜 + 도메인 + 포트**가 모두 같아야 합니다.
+</Callout>
+
+### 출처 비교 예시
+
+```javascript
+// 기준 URL: https://example.com:443/page
+
+// ✅ 같은 출처
+https://example.com:443/api/users
+https://example.com/other-page
+
+// ❌ 다른 출처
+http://example.com/api/users        // 프로토콜 다름 (https vs http)
+https://api.example.com/users       // 서브도메인 다름
+https://example.com:8080/api/users  // 포트 다름
+https://other.com/api/users         // 도메인 다름
+```
+
+### 브라우저에서 출처 확인
+
+```javascript
+// 현재 페이지의 출처 확인
+console.log(window.location.origin); // "https://example.com"
+
+// URL 파싱하여 출처 구성 요소 확인
+const url = new URL("https://api.example.com:8080/users");
+console.log(url.protocol); // "https:"
+console.log(url.hostname); // "api.example.com"
+console.log(url.port); // "8080"
+console.log(url.origin); // "https://api.example.com:8080"
+```
+
+## CORS 동작 방식
+
+### 1. Simple Request (단순 요청)
+
+다음 조건을 모두 만족하는 요청:
+
+- **메서드**: GET, HEAD, POST 중 하나
+- **헤더**: Accept, Accept-Language, Content-Language, Content-Type만 허용
+- **Content-Type**: application/x-www-form-urlencoded, multipart/form-data, text/plain만 허용
+
+```javascript
+// Simple Request 예시
+fetch("https://api.example.com/users", {
+  method: "GET",
+  headers: {
+    "Content-Type": "text/plain",
+  },
+});
+
+// 서버 응답에 CORS 헤더가 포함되어야 함
+// Access-Control-Allow-Origin: https://mysite.com
+```
+
+### 2. Preflight Request (사전 요청)
+
+Simple Request 조건을 만족하지 않는 경우, 브라우저가 실제 요청 전에 OPTIONS 메서드로 사전 요청을 보냅니다.
+
+```javascript
+// Preflight가 필요한 요청 예시
+fetch("https://api.example.com/users", {
+  method: "PUT",
+  headers: {
+    "Content-Type": "application/json",
+    Authorization: "Bearer token123",
+  },
+  body: JSON.stringify({ name: "John" }),
+});
+```
+
+#### Preflight 요청/응답 과정
+
+```http
+# 1. 브라우저가 보내는 Preflight 요청
+OPTIONS /users HTTP/1.1
+Host: api.example.com
+Origin: https://mysite.com
+Access-Control-Request-Method: PUT
+Access-Control-Request-Headers: Content-Type, Authorization
+
+# 2. 서버의 Preflight 응답
+HTTP/1.1 200 OK
+Access-Control-Allow-Origin: https://mysite.com
+Access-Control-Allow-Methods: GET, POST, PUT, DELETE
+Access-Control-Allow-Headers: Content-Type, Authorization
+Access-Control-Max-Age: 86400
+
+# 3. 실제 요청 (Preflight 성공 시)
+PUT /users HTTP/1.1
+Host: api.example.com
+Origin: https://mysite.com
+Content-Type: application/json
+Authorization: Bearer token123
+```
+
+## CORS 헤더 설명
+
+### 서버 응답 헤더
+
+#### Access-Control-Allow-Origin
+
+```javascript
+// 특정 출처 허용
+res.setHeader("Access-Control-Allow-Origin", "https://mysite.com");
+
+// 모든 출처 허용 (보안상 위험)
+res.setHeader("Access-Control-Allow-Origin", "*");
+
+// 동적으로 출처 허용
+const allowedOrigins = ["https://mysite.com", "https://myapp.com"];
+const origin = req.headers.origin;
+if (allowedOrigins.includes(origin)) {
+  res.setHeader("Access-Control-Allow-Origin", origin);
+}
+```
+
+#### Access-Control-Allow-Methods
+
+```javascript
+res.setHeader(
+  "Access-Control-Allow-Methods",
+  "GET, POST, PUT, DELETE, OPTIONS",
+);
+```
+
+#### Access-Control-Allow-Headers
+
+```javascript
+res.setHeader(
+  "Access-Control-Allow-Headers",
+  "Content-Type, Authorization, X-Requested-With",
+);
+```
+
+#### Access-Control-Allow-Credentials
+
+```javascript
+// 쿠키나 인증 정보 포함 요청 허용
+res.setHeader("Access-Control-Allow-Credentials", "true");
+
+// 클라이언트에서는 credentials: 'include' 필요
+fetch("https://api.example.com/users", {
+  credentials: "include",
+});
+```
+
+#### Access-Control-Max-Age
+
+```javascript
+// Preflight 결과를 86400초(24시간) 동안 캐시
+res.setHeader("Access-Control-Max-Age", "86400");
+```
+
+## CORS 해결 방법
+
+### 1. 서버에서 CORS 헤더 설정
+
+#### Node.js (Express)
+
+```javascript
+// 기본 CORS 미들웨어
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  res.header(
+    "Access-Control-Allow-Headers",
+    "Origin, X-Requested-With, Content-Type, Accept, Authorization",
+  );
+
+  // Preflight 요청 처리
+  if (req.method === "OPTIONS") {
+    res.sendStatus(200);
+  } else {
+    next();
+  }
+});
+
+// cors 패키지 사용 (권장)
+const cors = require("cors");
+
+// 모든 출처 허용
+app.use(cors());
+
+// 특정 설정
+app.use(
+  cors({
+    origin: ["https://mysite.com", "https://myapp.com"],
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
+  }),
+);
+
+// 라우트별 설정
+app.get("/api/public", cors(), (req, res) => {
+  res.json({ message: "Public endpoint" });
+});
+
+app.post(
+  "/api/private",
+  cors({
+    origin: "https://mysite.com",
+    credentials: true,
+  }),
+  (req, res) => {
+    res.json({ message: "Private endpoint" });
+  },
+);
+```
+
+#### Spring Boot (Java)
+
+```java
+@CrossOrigin(origins = "https://mysite.com", maxAge = 3600)
+@RestController
+public class UserController {
+
+  @GetMapping("/users")
+  public List<User> getUsers() {
+    return userService.getAllUsers();
+  }
+}
+
+// 글로벌 CORS 설정
+@Configuration
+public class CorsConfig implements WebMvcConfigurer {
+
+  @Override
+  public void addCorsMappings(CorsRegistry registry) {
+    registry.addMapping("/**")
+            .allowedOrigins("https://mysite.com")
+            .allowedMethods("GET", "POST", "PUT", "DELETE")
+            .allowedHeaders("*")
+            .allowCredentials(true);
+  }
+}
+```
+
+#### PHP
+
+```php
+<?php
+header('Access-Control-Allow-Origin: https://mysite.com');
+header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type, Authorization');
+header('Access-Control-Allow-Credentials: true');
+
+// Preflight 요청 처리
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit();
+}
+?>
+```
+
+### 2. 프록시 서버 사용
+
+#### Webpack Dev Server
+
+```javascript
+// webpack.config.js
+module.exports = {
+  devServer: {
+    proxy: {
+      "/api": {
+        target: "https://api.example.com",
+        changeOrigin: true,
+        pathRewrite: {
+          "^/api": "",
+        },
+      },
+    },
+  },
+};
+
+// 사용법
+// 기존: fetch('https://api.example.com/users') - CORS 에러
+// 변경: fetch('/api/users') - 프록시를 통해 우회
+```
+
+#### Vite
+
+```javascript
+// vite.config.js
+export default {
+  server: {
+    proxy: {
+      "/api": {
+        target: "https://api.example.com",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, ""),
+      },
+    },
+  },
+};
+```
+
+#### Next.js
+
+```javascript
+// next.config.js
+module.exports = {
+  async rewrites() {
+    return [
+      {
+        source: "/api/:path*",
+        destination: "https://api.example.com/:path*",
+      },
+    ];
+  },
+};
+```
+
+### 3. JSONP 방식 (레거시)
+
+<Callout type="warn">
+  JSONP는 GET 요청만 가능하고 보안상 취약하므로 현재는 권장하지 않습니다.
+</Callout>
+
+```javascript
+// JSONP 요청
+function jsonpRequest(url, callbackName) {
+  const script = document.createElement("script");
+  script.src = `${url}?callback=${callbackName}`;
+  document.head.appendChild(script);
+}
+
+// 콜백 함수 정의
+window.handleResponse = function (data) {
+  console.log(data);
+  // 사용 후 script 태그 제거
+  document.head.removeChild(
+    document.querySelector('script[src*="callback=handleResponse"]'),
+  );
+};
+
+// JSONP 요청 실행
+jsonpRequest("https://api.example.com/users", "handleResponse");
+
+// 서버에서는 콜백 함수로 감싸서 응답
+// handleResponse({"users": [...]})
+```
+
+### 4. 개발 환경에서의 임시 해결책
+
+```bash
+# Chrome 브라우저를 CORS 비활성화 모드로 실행
+google-chrome --disable-web-security --user-data-dir="/tmp/chrome_dev"
+
+# CORS 우회 브라우저 확장 프로그램
+# - CORS Unblock
+# - Allow CORS
+```
+
+## 실제 개발 시나리오
+
+### SPA에서 API 호출
+
+```javascript
+// React 앱에서 외부 API 호출
+const fetchUsers = async () => {
+  try {
+    const response = await fetch("https://api.external.com/users", {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const users = await response.json();
+    return users;
+  } catch (error) {
+    if (error.name === "TypeError" && error.message.includes("CORS")) {
+      console.error("CORS error - check server CORS configuration");
+    }
+    throw error;
+  }
+};
+```
+
+### 에러 처리 및 디버깅
+
+```javascript
+// CORS 에러 감지
+const handleCorsError = (error) => {
+  if (
+    error instanceof TypeError &&
+    (error.message.includes("CORS") ||
+      error.message.includes("Network request failed"))
+  ) {
+    console.error("CORS Error Detected!");
+    console.log("Possible solutions:");
+    console.log("1. Configure CORS headers on the server");
+    console.log("2. Use a proxy server");
+    console.log("3. Make sure the request is from the correct origin");
+
+    // 사용자에게 친화적인 에러 메시지 표시
+    showUserError("서버 연결에 문제가 있습니다. 잠시 후 다시 시도해주세요.");
+  }
+};
+```
+
+<Callout type="info">
+**면접 팁**
+
+CORS 관련 질문에서는 단순히 해결 방법만 나열하지 말고, 왜 이런 정책이 존재하는지(보안상 이유), 어떤 상황에서 발생하는지, 그리고 각 해결 방법의 장단점을 함께 설명할 수 있어야 합니다.
+
+</Callout>

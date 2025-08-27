@@ -1,0 +1,164 @@
+---
+title: 객체 지향 프로그래밍 (OOP)
+description: 객체지향프로그래밍의 개념과 특성에 대해 설명합니다.
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+<Callout type="info">
+**중요도: ⭐⭐⭐⭐⭐**
+
+프로그래밍 패러다임의 핵심 개념입니다.
+
+</Callout>
+
+## 개념
+
+객체지향프로그래밍(OOP, Object Oriented Programming)은 컴퓨터 프로그래밍 패러다임 중 하나로, 데이터를 추상화시켜 상태(attribute)와 행위(Method)를 가진 객체로 만들고 그 객체들 간의 상호작용을 통해 로직을 구성하는 프로그래밍 방법입니다.
+
+## 장단점
+
+### 장점
+
+- 코드 재사용 및 유지보수 용이
+- 대형 프로젝트에 적합
+- 직관적이고 이해하기 쉬운 구조
+
+### 단점
+
+- 처리속도 느림
+- 설계 시 많은 시간이 필요
+- 객체가 많을 시 용량이 커짐
+
+## 객체지향의 4가지 특성
+
+### 1. 캡슐화 (Encapsulation)
+
+<Callout type="note">변수와 함수를 하나의 단위로 묶는 것, 정보 은닉</Callout>
+
+- 객체 내부의 구현을 숨기고 외부에서는 인터페이스만 접근
+- 데이터의 무결성 보장
+- 코드의 유연성과 유지보수성 향상
+
+```javascript
+class Person {
+  #name; // private field
+  #age;
+
+  constructor(name, age) {
+    this.#name = name;
+    this.#age = age;
+  }
+
+  getName() {
+    return this.#name;
+  }
+
+  setName(name) {
+    if (typeof name === "string") {
+      this.#name = name;
+    }
+  }
+}
+```
+
+### 2. 상속화 (Inheritance)
+
+<Callout type="note">
+  이미 정의된 상위 클래스의 모든 속성과 연산을 하위 클래스가 물려받는 것
+</Callout>
+
+- 코드의 재사용성 증대
+- 계층적 구조를 통한 체계적 관리
+- 확장성 제공
+
+```javascript
+class Animal {
+  constructor(name) {
+    this.name = name;
+  }
+
+  speak() {
+    console.log(`${this.name} makes a sound`);
+  }
+}
+
+class Dog extends Animal {
+  speak() {
+    console.log(`${this.name} barks`);
+  }
+}
+```
+
+### 3. 추상화 (Abstraction)
+
+<Callout type="note">객체들의 공통적인 특징을 도출하는 것</Callout>
+
+- 복잡한 시스템을 단순화
+- 핵심적인 개념만 추출
+- 인터페이스와 구현의 분리
+
+```javascript
+// 추상 클래스 개념 (JavaScript에서는 관례적으로)
+class Shape {
+  constructor() {
+    if (new.target === Shape) {
+      throw new Error("추상 클래스는 직접 인스턴스화할 수 없습니다.");
+    }
+  }
+
+  // 추상 메서드
+  getArea() {
+    throw new Error("하위 클래스에서 구현해야 합니다.");
+  }
+}
+
+class Circle extends Shape {
+  constructor(radius) {
+    super();
+    this.radius = radius;
+  }
+
+  getArea() {
+    return Math.PI * this.radius ** 2;
+  }
+}
+```
+
+### 4. 다형성 (Polymorphism)
+
+<Callout type="note">
+  하나의 변수 또는 함수가 상황에 따라 다른 의미로 해석될 수 있는 것
+</Callout>
+
+- 같은 인터페이스로 다른 동작 수행
+- 코드의 유연성과 확장성 제공
+- 오버라이딩과 오버로딩
+
+```javascript
+class Calculator {
+  // 메서드 오버로딩 (JavaScript는 직접 지원하지 않음)
+  add(...args) {
+    if (args.length === 2) {
+      return args[0] + args[1];
+    } else if (args.length === 3) {
+      return args[0] + args[1] + args[2];
+    }
+  }
+}
+
+// 다형성 예시
+function makeSound(animal) {
+  animal.speak(); // 각 동물 클래스의 구현에 따라 다른 소리
+}
+
+makeSound(new Dog("멍멍이")); // 멍멍이 barks
+makeSound(new Cat("야옹이")); // 야옹이 meows
+```
+
+<Callout type="info">
+**면접 팁**
+
+OOP의 개념을 설명할 때는 구체적인 예시와 함께 설명하는 것이 좋습니다. 특히 JavaScript의 프로토타입 기반 상속과 ES6+ 클래스 문법의 차이점도 이해해두세요.
+
+</Callout>

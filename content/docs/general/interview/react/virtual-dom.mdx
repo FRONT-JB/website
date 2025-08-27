@@ -1,0 +1,415 @@
+---
+title: "Virtual DOM과 재조정"
+description: "React의 Virtual DOM과 재조정(Reconciliation) 과정"
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+<Callout type="info">
+**중요도: ⭐⭐⭐⭐⭐**
+
+React의 핵심 개념으로, 현대 프론트엔드 개발의 기초입니다.
+
+</Callout>
+
+# Virtual DOM과 재조정
+
+**Virtual DOM**은 메모리 상에 있는 가상의 DOM으로, **변경된 부분만 업데이트하여 빠른 웹 렌더링을 가능하게 하는 기법**입니다.
+
+### DOM의 문제점
+
+실제 DOM 조작은 비용이 많이 드는 작업입니다:
+
+```javascript
+// ❌ 실제 DOM 직접 조작 (비효율적)
+function updateUserList(users) {
+  const container = document.getElementById("user-list");
+
+  // 전체 내용을 지우고 다시 생성
+  container.innerHTML = "";
+
+  users.forEach((user) => {
+    const userElement = document.createElement("div");
+    userElement.className = "user-item";
+    userElement.innerHTML = `
+      <span>${user.name}</span>
+      <span>${user.email}</span>
+    `;
+    container.appendChild(userElement); // DOM 조작 (비용 많이 듦)
+  });
+}
+
+// 사용자 목록이 변경될 때마다 전체 리스트 재생성
+updateUserList(users);
+```
+
+**DOM 조작이 비싼 이유:**
+
+1. **레이아웃 재계산** (Reflow)
+2. **다시 그리기** (Repaint)
+3. **DOM 트리 탐색**의 복잡성
+4. **스타일 재계산**
+
+### Virtual DOM의 동작 방식
+
+```javascript
+// Virtual DOM의 개념적 구조
+const virtualDOM = {
+  type: "div",
+  props: {
+    className: "user-list",
+    children: [
+      {
+        type: "div",
+        props: {
+          className: "user-item",
+          children: [
+            { type: "span", props: { children: "John Doe" } },
+            { type: "span", props: { children: "john@example.com" } },
+          ],
+        },
+      },
+    ],
+  },
+};
+```
+
+#### Virtual DOM 업데이트 과정
+
+```jsx
+// 1. 초기 상태
+function UserList({ users }) {
+  return (
+    <div className="user-list">
+      {users.map((user) => (
+        <div key={user.id} className="user-item">
+          <span>{user.name}</span>
+          <span>{user.email}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// 2. 상태 변경 시
+const [users, setUsers] = useState([
+  { id: 1, name: "John", email: "john@example.com" },
+  { id: 2, name: "Jane", email: "jane@example.com" },
+]);
+
+// 새로운 사용자 추가
+const addUser = () => {
+  setUsers([
+    ...users,
+    {
+      id: 3,
+      name: "Bob",
+      email: "bob@example.com",
+    },
+  ]);
+};
+```
+
+### 재조정(Reconciliation) 과정
+
+재조정은 **새로운 Virtual DOM과 기존 Virtual DOM을 비교하여 차이를 찾아내고 변경된 부분만 실제 DOM에 적용하는 과정**입니다.
+
+#### Diffing Algorithm
+
+```jsx
+// React의 diffing 과정 예시
+
+// 이전 Virtual DOM
+<div className="container">
+  <span>Hello</span>
+  <span>World</span>
+</div>
+
+// 새로운 Virtual DOM
+<div className="container">
+  <span>Hello</span>
+  <span>React</span>  {/* 변경됨 */}
+  <span>World</span>   {/* 새로 추가됨 */}
+</div>
+
+// React가 감지하는 변화:
+// 1. 두 번째 span의 텍스트 변경: "World" → "React"
+// 2. 세 번째 span 추가: "World"
+```
+
+### Key의 중요성
+
+**Key**는 React가 어떤 요소가 변경, 추가, 제거되었는지 식별하는 데 사용됩니다.
+
+```jsx
+// ❌ Key 없이 리스트 렌더링
+function BadList({ items }) {
+  return (
+    <ul>
+      {items.map((item) => (
+        <li>{item.name}</li> // key가 없음
+      ))}
+    </ul>
+  );
+}
+
+// ✅ Key를 사용한 올바른 리스트 렌더링
+function GoodList({ items }) {
+  return (
+    <ul>
+      {items.map((item) => (
+        <li key={item.id}>{item.name}</li>
+      ))}
+    </ul>
+  );
+}
+```
+
+#### Key 사용 시와 미사용 시 비교
+
+```jsx
+// 배열 앞에 항목 추가 시나리오
+const initialItems = [
+  { id: 1, name: "Apple" },
+  { id: 2, name: "Banana" },
+];
+
+const newItems = [
+  { id: 3, name: "Cherry" }, // 새로 추가
+  { id: 1, name: "Apple" },
+  { id: 2, name: "Banana" },
+];
+
+// Key 없을 때 React의 인식:
+// - 첫 번째 li: "Apple" → "Cherry" (변경)
+// - 두 번째 li: "Banana" → "Apple" (변경)
+// - 세 번째 li: 새로 생성 "Banana" (추가)
+// → 모든 항목이 변경되어 비효율적
+
+// Key 있을 때 React의 인식:
+// - id=3인 새 항목 추가
+// - id=1, id=2 항목은 위치만 이동
+// → 효율적인 업데이트
+```
+
+### Fiber Architecture
+
+React 16부터 도입된 **Fiber**는 재조정 과정을 더욱 효율적으로 만듭니다.
+
+```jsx
+// Fiber의 주요 특징들을 보여주는 예시
+
+function App() {
+  const [count, setCount] = useState(0);
+  const [users, setUsers] = useState([]);
+
+  // 1. 작업 우선순위 - 사용자 입력이 더 높은 우선순위
+  const handleClick = () => {
+    setCount(count + 1); // 높은 우선순위 업데이트
+  };
+
+  const loadUsers = async () => {
+    const userData = await fetchUsers(); // 낮은 우선순위 업데이트
+    setUsers(userData);
+  };
+
+  return (
+    <div>
+      {/* 2. 시간 분할 - 큰 리스트도 부드럽게 렌더링 */}
+      <button onClick={handleClick}>Count: {count}</button>
+      {/* 3. 중단 가능한 렌더링 */}
+      <UserList users={users} /> {/* 큰 리스트라도 버튼 클릭 반응성 유지 */}
+    </div>
+  );
+}
+```
+
+### React 18의 Concurrent Features
+
+```jsx
+import { startTransition, useDeferredValue } from "react";
+
+function SearchResults() {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState([]);
+
+  // 지연 가능한 값으로 처리
+  const deferredQuery = useDeferredValue(query);
+
+  const handleSearch = (newQuery) => {
+    // 즉시 업데이트 (긴급)
+    setQuery(newQuery);
+
+    // 전환으로 표시 (지연 가능)
+    startTransition(() => {
+      const searchResults = performSearch(newQuery);
+      setResults(searchResults);
+    });
+  };
+
+  return (
+    <div>
+      <input
+        value={query}
+        onChange={(e) => handleSearch(e.target.value)}
+        placeholder="검색..."
+      />
+      {/* 검색 결과는 지연되어 업데이트 */}
+      <SearchResultsList query={deferredQuery} results={results} />
+    </div>
+  );
+}
+```
+
+### Virtual DOM의 장단점
+
+#### 장점
+
+1. **성능 최적화**
+
+```jsx
+// Virtual DOM 없이
+function updateTodos(todos) {
+  // 매번 전체 리스트 재생성
+  document.getElementById("todo-list").innerHTML = "";
+  todos.forEach((todo) => {
+    // DOM 조작 반복
+  });
+}
+
+// Virtual DOM 사용
+function TodoList({ todos }) {
+  // 변경된 부분만 업데이트
+  return (
+    <ul>
+      {todos.map((todo) => (
+        <TodoItem key={todo.id} todo={todo} />
+      ))}
+    </ul>
+  );
+}
+```
+
+2. **예측 가능한 렌더링**
+
+```jsx
+// 상태가 변경되면 항상 같은 결과
+function Component({ user }) {
+  return <div>{user.name}</div>;
+}
+// user.name이 같으면 항상 같은 DOM 구조 생성
+```
+
+3. **크로스 브라우저 호환성**
+
+```jsx
+// React가 브라우저 차이를 추상화
+<input onChange={handleChange} />
+// IE에서도 Chrome에서도 동일하게 동작
+```
+
+#### 단점
+
+1. **메모리 사용량 증가**
+
+```javascript
+// Virtual DOM 트리를 메모리에 유지
+const virtualTree = {
+  // 전체 DOM 구조를 JavaScript 객체로 저장
+};
+```
+
+2. **초기 학습 비용**
+
+```jsx
+// 기존 DOM 조작과 다른 사고 방식 필요
+// 직접 DOM 조작 대신 상태 변경으로 UI 업데이트
+const [isVisible, setIsVisible] = useState(false);
+```
+
+### Virtual DOM vs 다른 접근 방식
+
+#### Svelte (컴파일 시점 최적화)
+
+```javascript
+// Svelte - Virtual DOM 없이 직접 DOM 업데이트
+let count = 0;
+
+function increment() {
+  count += 1; // 컴파일러가 자동으로 DOM 업데이트 코드 생성
+}
+```
+
+#### Vue.js (Reactive System)
+
+```javascript
+// Vue - 반응형 시스템으로 변경 사항 추적
+const app = createApp({
+  data() {
+    return {
+      message: "Hello Vue!",
+    };
+  },
+});
+// message 변경 시 자동으로 관련 DOM만 업데이트
+```
+
+### Virtual DOM 최적화 팁
+
+```jsx
+// 1. React.memo로 불필요한 렌더링 방지
+const ExpensiveComponent = React.memo(function ExpensiveComponent({ data }) {
+  // data가 변경되지 않으면 렌더링 생략
+  return <ComplexVisualization data={data} />;
+});
+
+// 2. useMemo로 계산 결과 캐싱
+function DataVisualization({ rawData }) {
+  const processedData = useMemo(() => {
+    return expensiveDataProcessing(rawData);
+  }, [rawData]);
+
+  return <Chart data={processedData} />;
+}
+
+// 3. 키를 올바르게 사용
+function DynamicList({ items }) {
+  return (
+    <div>
+      {items.map((item) => (
+        <Item
+          key={item.id} // 안정적이고 고유한 키 사용
+          data={item}
+        />
+      ))}
+    </div>
+  );
+}
+
+// 4. 조건부 렌더링 최적화
+function ConditionalComponent({ showExpensive, data }) {
+  return (
+    <div>
+      {/* 불필요한 컴포넌트 생성 방지 */}
+      {showExpensive && <ExpensiveComponent data={data} />}
+    </div>
+  );
+}
+```
+
+<Callout type="info" title="Virtual DOM 핵심 개념">
+
+1. **Virtual DOM**은 실제 DOM의 가벼운 JavaScript 표현
+2. **Diffing Algorithm**으로 변경사항을 효율적으로 감지
+3. **재조정(Reconciliation)**을 통해 최소한의 DOM 조작만 수행
+4. **Key**를 통해 요소의 정체성을 식별하여 최적화
+5. **Fiber Architecture**로 렌더링 작업을 중단하고 우선순위 관리
+
+</Callout>
+
+<Callout type="info">
+**면접 팁**
+
+Virtual DOM에 대해 질문받을 때는 단순히 개념만 설명하지 말고, Diffing 알고리즘, 재조정 과정, Key 프로프의 중요성 등을 구체적으로 설명할 수 있어야 합니다. 또한 React 18의 Concurrent Features, 실무에서의 성능 최적화 경험 등도 함께 언급하면 좋습니다.
+
+</Callout>

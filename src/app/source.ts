@@ -1,5 +1,4 @@
 import { createOpenAPI, attachFile } from "fumadocs-openapi/server";
-
 import { loader } from "fumadocs-core/source";
 import { createMDXSource } from "fumadocs-mdx";
 import { docs, meta, blog as blogPosts } from "../../.source";

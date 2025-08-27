@@ -14,7 +14,8 @@ export function TilCards({ year }: TilCardsProps) {
     .getPages()
     .filter(
       (page) =>
-        page.url.startsWith(`/docs/${year}/`) && page.url !== `/docs/${year}`,
+        page.url.startsWith(`/docs/personal/${year}/`) &&
+        page.url !== `/docs/personal/${year}`,
     )
     .sort((a, b) => {
       // 파일명으로 정렬 (최신 순)
@@ -85,7 +86,7 @@ export function TilCards({ year }: TilCardsProps) {
         <Card
           key="other-months"
           title={`${year} - 총 ${totalOtherMonthProblems}문제`}
-          href={`/docs/${year}`}
+          href={`/docs/personal/${year}`}
           icon={<CalendarIcon />}
           description={`${currentMonth}월 이전의 모든 알고리즘 학습 기록`}
         />

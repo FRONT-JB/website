@@ -1,0 +1,384 @@
+---
+title: "CSS 우선순위와 캐스케이딩"
+description: "CSS의 우선순위(Specificity)와 캐스케이딩에 대한 이해"
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+<Callout type="info">
+**중요도: ⭐⭐⭐⭐⭐**
+
+CSS의 핵심 개념으로, 스타일 충돌을 해결하는 메커니즘입니다.
+
+</Callout>
+
+## 개념
+
+CSS의 우선순위는 **여러 규칙이 같은 요소에 적용될 때 어떤 스타일이 최종적으로 적용될지 결정하는 메커니즘**입니다.
+
+<Callout type="note">
+  CSS 우선순위는 동일한 요소에 둘 이상의 CSS 규칙이 적용될 때 어떤 규칙을
+  적용할지 결정하는 방법입니다.
+</Callout>
+
+### 우선순위 계산 방식
+
+CSS 우선순위는 4단계로 구성되며, 왼쪽부터 높은 순위를 가집니다.
+
+```
+[인라인 스타일] [ID 선택자] [클래스/속성/가상클래스] [요소 선택자]
+    1000        100            10             1
+```
+
+### 우선순위 예시
+
+```css
+/* 우선순위: 0001 */
+div {
+  color: black;
+}
+
+/* 우선순위: 0010 */
+.text {
+  color: blue;
+}
+
+/* 우선순위: 0011 */
+div.text {
+  color: green;
+}
+
+/* 우선순위: 0100 */
+#content {
+  color: red;
+}
+
+/* 우선순위: 0111 */
+div#content.text {
+  color: purple;
+}
+
+/* 우선순위: 1000 */
+<div style="color: orange;">텍스트</div>
+```
+
+### 선택자별 우선순위 값
+
+| 선택자 타입       | 우선순위 값 | 예시                      |
+| ----------------- | ----------- | ------------------------- |
+| **인라인 스타일** | 1000        | `style="color: red;"`     |
+| **ID 선택자**     | 100         | `#header`, `#main`        |
+| **클래스 선택자** | 10          | `.button`, `.active`      |
+| **속성 선택자**   | 10          | `[type="text"]`, `[href]` |
+| **가상 클래스**   | 10          | `:hover`, `:focus`        |
+| **요소 선택자**   | 1           | `div`, `p`, `a`           |
+| **가상 요소**     | 1           | `::before`, `::after`     |
+| **전체 선택자**   | 0           | `*`                       |
+
+### 실제 우선순위 계산 예시
+
+```css
+/* 우선순위 계산 연습 */
+
+/* 0001: div(1) */
+div {
+  color: black;
+}
+
+/* 0011: div(1) + .text(10) */
+div.text {
+  color: blue;
+}
+
+/* 0021: div(1) + .text(10) + .highlight(10) */
+div.text.highlight {
+  color: green;
+}
+
+/* 0101: #content(100) + div(1) */
+#content div {
+  color: red;
+}
+
+/* 0111: #content(100) + div(1) + .text(10) */
+#content div.text {
+  color: purple;
+}
+
+/* 0012: div(1) + a(1) + :hover(10) */
+div a:hover {
+  color: orange;
+}
+
+/* 0022: div(1) + a(1) + .link(10) + :hover(10) */
+div a.link:hover {
+  color: pink;
+}
+```
+
+### !important 규칙
+
+`!important`는 가장 높은 우선순위를 가지지만, **남용하면 유지보수가 어려워**집니다.
+
+```css
+.text {
+  color: blue !important; /* 다른 모든 규칙보다 우선 */
+}
+
+#content {
+  color: red; /* !important가 있는 규칙에 밀림 */
+}
+
+/* !important도 우선순위가 있음 */
+.text {
+  color: blue !important; /* 우선순위: 0010 + !important */
+}
+
+#content .text {
+  color: green !important; /* 우선순위: 0110 + !important (더 구체적) */
+}
+```
+
+### 캐스케이딩 규칙
+
+같은 우선순위일 때는 다음 순서로 적용됩니다:
+
+#### 1. 소스 순서 (Source Order)
+
+```css
+/* 같은 우선순위 (0010)일 때 */
+.button {
+  background: blue; /* 이 규칙이 먼저 선언됨 */
+}
+
+.button {
+  background: red; /* 이 규칙이 최종 적용됨 */
+}
+```
+
+#### 2. 중요도 (Importance)
+
+```css
+/* !important 선언 */
+.urgent {
+  color: red !important;
+}
+
+/* 아무리 구체적이어도 !important에 밀림 */
+html body div#main .content .urgent {
+  color: blue; /* 적용되지 않음 */
+}
+```
+
+#### 3. 출처 (Origin)
+
+1. 사용자 에이전트 스타일 (브라우저 기본 스타일)
+2. 사용자 스타일
+3. 작성자 스타일 (개발자가 작성한 CSS)
+4. 작성자 !important 스타일
+5. 사용자 !important 스타일
+
+### 우선순위 관리 전략
+
+#### 좋은 예시: 점진적 구체성
+
+```css
+/* 구체성을 점진적으로 높이기 */
+.card {
+  background: white;
+  padding: 1rem;
+}
+
+.card.featured {
+  background: #f8f9fa;
+  border: 2px solid #007bff;
+}
+
+.card.featured.premium {
+  background: linear-gradient(45deg, #ffd700, #ffed4e);
+  border-color: #ffc107;
+}
+```
+
+#### 피해야 할 예시: 과도한 구체성
+
+```css
+/* ❌ 과도하게 구체적 */
+html body div#main section.content article.post h2.title {
+  font-size: 2rem; /* 나중에 스타일을 덮어쓰기 어려움 */
+}
+
+/* ❌ !important 남용 */
+.text {
+  color: blue !important;
+  font-size: 16px !important;
+  margin: 10px !important;
+  padding: 5px !important;
+}
+```
+
+### BEM 방법론으로 우선순위 관리
+
+```css
+/* BEM 방법론 사용 시 우선순위가 일정함 */
+.card {
+  /* 0010 */
+}
+.card__header {
+  /* 0010 */
+}
+.card__body {
+  /* 0010 */
+}
+.card__footer {
+  /* 0010 */
+}
+.card--featured {
+  /* 0010 */
+}
+.card__header--large {
+  /* 0010 */
+}
+
+/* 모든 선택자가 동일한 우선순위를 가져 관리하기 쉬움 */
+```
+
+### CSS Custom Properties와 우선순위
+
+```css
+:root {
+  --primary-color: #007bff;
+  --text-color: #333;
+}
+
+.component {
+  color: var(--text-color);
+  background-color: var(--primary-color);
+}
+
+/* 우선순위는 선택자 기준, 변수 값은 상속됨 */
+.component.special {
+  --primary-color: #28a745; /* 변수 값만 변경 */
+}
+```
+
+### 실무에서의 우선순위 전략
+
+#### 1. CSS 아키텍처 (ITCSS)
+
+```css
+/* 1. Settings - 변수, 설정 */
+:root {
+  --color-primary: #007bff;
+}
+
+/* 2. Tools - mixins, functions */
+/* (Sass/LESS에서 사용) */
+
+/* 3. Generic - 리셋, normalize */
+* {
+  box-sizing: border-box;
+}
+
+/* 4. Elements - 기본 HTML 요소 */
+h1 {
+  font-size: 2rem;
+}
+
+/* 5. Objects - 레이아웃 패턴 */
+.o-container {
+  max-width: 1200px;
+}
+
+/* 6. Components - UI 컴포넌트 */
+.c-button {
+  padding: 0.5rem 1rem;
+}
+
+/* 7. Utilities - 유틸리티 클래스 */
+.u-text-center {
+  text-align: center !important;
+}
+```
+
+#### 2. 우선순위 디버깅
+
+```css
+/* 개발자 도구 활용법 */
+.debug-element {
+  /* 스타일이 적용되지 않을 때 확인사항:
+     1. 선택자 오타 확인
+     2. Elements 패널에서 computed styles 확인
+     3. 취소선으로 표시된 규칙 확인
+     4. 상속 관계 확인 */
+}
+```
+
+### 성능을 고려한 선택자 작성
+
+```css
+/* ❌ 성능에 안 좋은 선택자 */
+div div div div p {
+} /* 깊은 중첩 */
+* {
+} /* 전체 선택자 */
+[id*="nav"] {
+} /* 복잡한 속성 선택자 */
+
+/* ✅ 성능에 좋은 선택자 */
+.navigation {
+} /* 간단한 클래스 */
+#header {
+} /* ID 선택자 */
+.nav-item {
+} /* BEM 스타일 */
+```
+
+### CSS-in-JS와 우선순위
+
+```css
+/* styled-components 등에서 생성되는 고유 클래스 */
+.sc-bdvvaa {
+  /* 자동 생성된 고유 클래스명 */
+  color: blue;
+}
+
+.sc-bdvvaa.sc-bdvvaa {
+  /* 의도적으로 우선순위 높임 */
+  background: red;
+}
+```
+
+### 우선순위 테스트 도구
+
+```html
+<!-- HTML에서 테스트 -->
+<div id="test" class="text highlight" style="color: orange;">테스트 텍스트</div>
+
+<script>
+  // JavaScript로 최종 적용된 스타일 확인
+  const element = document.getElementById("test");
+  const computedStyle = getComputedStyle(element);
+  console.log("최종 색상:", computedStyle.color);
+</script>
+```
+
+<Callout type="note">
+**우선순위 관리 모범 사례**
+
+1. **낮은 우선순위부터 시작**: 기본 스타일을 낮은 우선순위로 작성
+2. **일관된 명명 규칙 사용**: BEM, SMACSS 등의 방법론 활용
+3. **!important 사용 최소화**: 정말 필요한 경우에만 사용
+4. **구체성 그래프 관리**: 우선순위가 점진적으로 증가하도록 설계
+5. **CSS 아키텍처 도입**: 체계적인 CSS 구조 유지
+
+</Callout>
+
+우선순위를 이해하면 예측 가능한 CSS를 작성할 수 있고, 디버깅 시간을 크게 줄일 수 있습니다.
+
+<Callout type="info">
+**면접 팁**
+
+CSS 우선순위에 대해 설명할 때는 단순히 점수 계산만 언급하지 말고, 실무에서 어떻게 관리하는지, BEM이나 CSS-in-JS 같은 방법론을 통해 어떻게 해결하는지까지 함께 설명할 수 있어야 합니다.
+
+</Callout>

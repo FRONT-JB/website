@@ -1,0 +1,316 @@
+---
+title: REST API
+description: REST 아키텍처의 제약조건과 API 설계 원칙에 대해 설명합니다.
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+<Callout type="info">
+**중요도: ⭐⭐⭐⭐⭐**
+
+웹 API 설계의 표준이 되는 아키텍처 스타일입니다.
+
+</Callout>
+
+## 개념
+
+REST API는 REST(Representational State Transfer) 아키텍처의 제약조건을 준수하는 애플리케이션 프로그래밍 인터페이스를 뜻합니다.
+
+## REST의 6가지 제약조건
+
+### 1. Client-Server 구조
+
+<Callout type="note">
+  클라이언트는 유저와 관련된 처리를, 서버는 REST API를 제공함으로써 각각의
+  역할이 확실하게 구분되고 일관적인 인터페이스로 분리되어 작동할 수 있게 합니다.
+</Callout>
+
+```javascript
+// 클라이언트 - UI 관련 로직
+const UserInterface = {
+  displayUsers: (users) => {
+    users.forEach((user) => {
+      console.log(`${user.name} - ${user.email}`);
+    });
+  },
+
+  handleUserClick: (userId) => {
+    // 서버 API 호출
+    UserAPI.getUser(userId);
+  },
+};
+
+// 서버 API - 데이터 처리 로직
+const UserAPI = {
+  getUsers: () => fetch("/api/users"),
+  getUser: (id) => fetch(`/api/users/${id}`),
+  createUser: (userData) =>
+    fetch("/api/users", {
+      method: "POST",
+      body: JSON.stringify(userData),
+    }),
+};
+```
+
+### 2. Stateless (무상태)
+
+<Callout type="note">
+  각 요청 간 클라이언트의 컨텍스트가 서버에 저장되어서는 안 됩니다.
+</Callout>
+
+```javascript
+// ❌ Stateful (상태 유지) - REST 위반
+// 서버가 클라이언트 상태를 기억하고 있음
+app.post("/api/login", (req, res) => {
+  if (authenticate(req.body)) {
+    req.session.userId = user.id; // 서버에 상태 저장
+    res.json({ success: true });
+  }
+});
+
+app.get("/api/profile", (req, res) => {
+  const userId = req.session.userId; // 이전 요청의 상태 사용
+  res.json(getUserProfile(userId));
+});
+
+// ✅ Stateless (무상태) - REST 준수
+// 각 요청이 완전히 독립적
+app.post("/api/login", (req, res) => {
+  if (authenticate(req.body)) {
+    const token = generateJWT(user);
+    res.json({ token }); // 클라이언트에게 토큰 전달
+  }
+});
+
+app.get("/api/profile", (req, res) => {
+  const token = req.headers.authorization; // 각 요청마다 인증 정보 포함
+  const userId = verifyJWT(token).userId;
+  res.json(getUserProfile(userId));
+});
+```
+
+### 3. Cacheable (캐시 처리 가능)
+
+<Callout type="note">
+  웹에서 사용하는 기존 인프라를 그대로 활용이 가능합니다.
+</Callout>
+
+```javascript
+// HTTP 캐시 헤더 설정
+app.get("/api/users/:id", (req, res) => {
+  const user = getUserById(req.params.id);
+
+  // 캐시 설정
+  res.set({
+    "Cache-Control": "public, max-age=3600", // 1시간 캐시
+    ETag: generateETag(user),
+    "Last-Modified": user.updatedAt,
+  });
+
+  res.json(user);
+});
+
+// 조건부 요청 처리
+app.get("/api/users/:id", (req, res) => {
+  const user = getUserById(req.params.id);
+  const clientETag = req.headers["if-none-match"];
+
+  if (clientETag === generateETag(user)) {
+    res.status(304).end(); // Not Modified
+  } else {
+    res.json(user);
+  }
+});
+```
+
+### 4. Layered System (계층형 구조)
+
+<Callout type="note">
+  다중 계층으로 구성될 수 있으며 보안, 로드 밸런싱, 암호화 계층을 추가해
+  구조상의 유연함을 둘 수 있습니다.
+</Callout>
+
+```
+Client ↔ Load Balancer ↔ API Gateway ↔ Authentication Service ↔ Business Logic ↔ Database
+```
+
+### 5. Code on Demand (선택사항)
+
+서버에서 클라이언트로 실행 가능한 코드를 전송하는 것 (예: JavaScript)
+
+### 6. Uniform Interface (일관된 인터페이스)
+
+<Callout type="note">
+  REST API 메시지만 보고도 이를 쉽게 이해할 수 있는 자체 표현 구조로 되어
+  있습니다.
+</Callout>
+
+## HTTP 메서드와 CRUD
+
+| HTTP 메서드 | CRUD 연산 | 설명             |
+| ----------- | --------- | ---------------- |
+| GET         | Read      | 리소스 조회      |
+| POST        | Create    | 리소스 생성      |
+| PUT         | Update    | 리소스 전체 수정 |
+| PATCH       | Update    | 리소스 일부 수정 |
+| DELETE      | Delete    | 리소스 삭제      |
+
+```javascript
+// RESTful API 예시
+const userAPI = {
+  // GET /api/users - 모든 사용자 조회
+  getUsers: () => fetch("/api/users"),
+
+  // GET /api/users/123 - 특정 사용자 조회
+  getUser: (id) => fetch(`/api/users/${id}`),
+
+  // POST /api/users - 새 사용자 생성
+  createUser: (userData) =>
+    fetch("/api/users", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(userData),
+    }),
+
+  // PUT /api/users/123 - 사용자 전체 정보 수정
+  updateUser: (id, userData) =>
+    fetch(`/api/users/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(userData),
+    }),
+
+  // PATCH /api/users/123 - 사용자 일부 정보 수정
+  patchUser: (id, partialData) =>
+    fetch(`/api/users/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(partialData),
+    }),
+
+  // DELETE /api/users/123 - 사용자 삭제
+  deleteUser: (id) =>
+    fetch(`/api/users/${id}`, {
+      method: "DELETE",
+    }),
+};
+```
+
+## HTTP 상태 코드
+
+### 성공 (2xx)
+
+- `200 OK`: 요청 성공
+- `201 Created`: 리소스 생성 성공
+- `204 No Content`: 성공했지만 반환할 데이터 없음
+
+### 클라이언트 오류 (4xx)
+
+- `400 Bad Request`: 잘못된 요청
+- `401 Unauthorized`: 인증 필요
+- `403 Forbidden`: 권한 없음
+- `404 Not Found`: 리소스를 찾을 수 없음
+
+### 서버 오류 (5xx)
+
+- `500 Internal Server Error`: 서버 내부 오류
+- `502 Bad Gateway`: 게이트웨이 오류
+- `503 Service Unavailable`: 서비스 사용 불가
+
+## RESTful API 설계 원칙
+
+### 1. 명사 사용, 동사 지양
+
+```javascript
+// ❌ Bad
+GET / getUsers;
+POST / createUser;
+PUT / updateUser / 123;
+
+// ✅ Good
+GET / users;
+POST / users;
+PUT / users / 123;
+```
+
+### 2. 계층 관계 표현
+
+```javascript
+// 사용자의 주문 목록
+GET / users / 123 / orders;
+
+// 특정 주문의 상품 목록
+GET / users / 123 / orders / 456 / items;
+```
+
+### 3. 필터링, 정렬, 페이징
+
+```javascript
+// 쿼리 파라미터 활용
+GET /users?page=2&limit=10&sort=name&status=active
+
+// 구현 예시
+app.get('/users', (req, res) => {
+  const {
+    page = 1,
+    limit = 10,
+    sort = 'id',
+    status
+  } = req.query;
+
+  const users = getUsersWithFilters({
+    page: parseInt(page),
+    limit: parseInt(limit),
+    sort,
+    status
+  });
+
+  res.json({
+    data: users,
+    pagination: {
+      page: parseInt(page),
+      limit: parseInt(limit),
+      total: getTotalUsers()
+    }
+  });
+});
+```
+
+### 4. 버전 관리
+
+```javascript
+// URL 경로에 버전 포함
+GET / api / v1 / users;
+GET / api / v2 / users;
+
+// 헤더에 버전 명시
+fetch("/api/users", {
+  headers: {
+    Accept: "application/vnd.api.v2+json",
+  },
+});
+```
+
+## HATEOAS (Hypermedia as the Engine of Application State)
+
+```javascript
+// 응답에 관련 링크 정보 포함
+{
+  "id": 123,
+  "name": "John Doe",
+  "email": "john@example.com",
+  "_links": {
+    "self": { "href": "/api/users/123" },
+    "orders": { "href": "/api/users/123/orders" },
+    "edit": { "href": "/api/users/123", "method": "PUT" },
+    "delete": { "href": "/api/users/123", "method": "DELETE" }
+  }
+}
+```
+
+<Callout type="info">
+**면접 팁**
+
+REST API 설계 시 고려해야 할 점들을 구체적인 예시와 함께 설명할 수 있어야 합니다. 특히 Stateless의 개념과 HTTP 메서드의 적절한 사용법을 잘 이해해두세요.
+
+</Callout>

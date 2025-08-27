@@ -1,5 +1,6 @@
 import { ErrorCallout, Info, Tip, Warning } from "@/components/mdx/admonition";
 import { LinkButton } from "@/components/mdx/link-button";
+import { Mermaid } from "@/components/mdx/mermaid";
 import { ImageZoom } from "fumadocs-ui/components/image-zoom";
 import defaultMdxComponents from "fumadocs-ui/mdx";
 import type { FC, ImgHTMLAttributes } from "react";
@@ -8,6 +9,7 @@ export * from "./admonition";
 export * from "./link-button";
 
 export const mdxComponents = {
+  Mermaid,
   ...defaultMdxComponents,
   Error: ErrorCallout,
   Info,

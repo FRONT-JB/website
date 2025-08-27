@@ -1,0 +1,172 @@
+---
+title: 브라우저 캐싱 전략
+description: 웹 성능 향상을 위한 브라우저 캐싱 메커니즘과 전략을 상세히 설명합니다.
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+<Callout type="info">
+**중요도: ⭐⭐⭐⭐**
+
+웹 성능 최적화의 핵심 기술입니다.
+
+</Callout>
+
+브라우저 캐싱은 웹 성능을 향상시키기 위해 리소스를 로컬에 저장하는 메커니즘입니다.
+
+## 캐시의 종류
+
+### 1. Browser Cache (HTTP Cache)
+
+- 브라우저가 HTTP 응답을 로컬에 저장
+- 같은 리소스 재요청 시 네트워크 요청 없이 사용
+
+### 2. Memory Cache
+
+- RAM에 저장되는 일시적 캐시
+- 탭을 닫으면 사라짐
+- 가장 빠른 접근 속도
+
+### 3. Disk Cache
+
+- 하드 디스크에 저장되는 영구적 캐시
+- 브라우저를 재시작해도 유지
+- Memory Cache보다 느리지만 용량이 큼
+
+## HTTP 캐시 제어 헤더
+
+### 1. Cache-Control
+
+```http
+# 최대 1년간 캐시
+Cache-Control: max-age=31536000
+
+# 캐시하지 않음
+Cache-Control: no-cache
+
+# 저장하지 않음
+Cache-Control: no-store
+
+# 공개 캐시 허용 (CDN 등)
+Cache-Control: public
+
+# 사설 캐시만 허용
+Cache-Control: private
+```
+
+### 2. ETag (Entity Tag)
+
+```http
+# 서버 응답
+ETag: "33a64df551425fcc55e4d42a148795d9f25f89d4"
+
+# 클라이언트 요청
+If-None-Match: "33a64df551425fcc55e4d42a148795d9f25f89d4"
+
+# 변경되지 않았다면
+HTTP/1.1 304 Not Modified
+```
+
+### 3. Last-Modified
+
+```http
+# 서버 응답
+Last-Modified: Wed, 21 Oct 2023 07:28:00 GMT
+
+# 클라이언트 요청
+If-Modified-Since: Wed, 21 Oct 2023 07:28:00 GMT
+```
+
+## 캐싱 전략
+
+### 1. Immutable Assets (변하지 않는 자산)
+
+```http
+# 파일명에 해시 포함: app.abc123.js
+Cache-Control: public, max-age=31536000, immutable
+```
+
+### 2. HTML Files
+
+```http
+# 항상 최신 상태 확인
+Cache-Control: no-cache
+```
+
+### 3. API Responses
+
+```http
+# 짧은 시간 캐시
+Cache-Control: private, max-age=300
+```
+
+### 4. Static Assets
+
+```http
+# 중간 시간 캐시 + 검증
+Cache-Control: public, max-age=86400
+ETag: "version-hash"
+```
+
+## Cache Busting 전략
+
+### 1. 파일명 해싱
+
+```javascript
+// 빌드 시 파일명에 해시 추가
+// app.js → app.abc123.js
+// style.css → style.def456.css
+```
+
+### 2. 쿼리 매개변수
+
+```html
+<!-- 버전 매개변수 추가 -->
+<script src="app.js?v=1.2.3"></script>
+<link href="style.css?v=1.2.3" rel="stylesheet" />
+```
+
+### 3. URL 경로 버전 관리
+
+```
+/v1/api/users
+/v2/api/users
+```
+
+## Service Worker 캐싱
+
+```javascript
+// Service Worker를 통한 고급 캐싱
+self.addEventListener("fetch", (event) => {
+  if (event.request.destination === "image") {
+    event.respondWith(
+      caches.match(event.request).then((response) => {
+        return response || fetch(event.request);
+      }),
+    );
+  }
+});
+```
+
+## 캐시 무효화 검증
+
+```javascript
+// 개발자 도구에서 캐시 상태 확인
+// Application → Storage → Cache Storage
+// Network → Disable cache 옵션 활용
+```
+
+## 모범 사례
+
+1. **정적 자산**: 긴 캐시 시간 + 파일명 해싱
+2. **HTML**: 짧은 캐시 시간 또는 no-cache
+3. **API**: 적절한 캐시 시간 + ETag 활용
+4. **CDN**: 공개 캐시 허용으로 글로벌 배포
+5. **모바일**: 네트워크 비용 고려한 적극적 캐싱
+
+<Callout type="info">
+**면접 팁**
+
+브라우저 캐싱에 대해 설명할 때는 단순히 개념만 말하지 말고, 실제 프로젝트에서 어떤 캐싱 전략을 사용했는지, 어떤 문제를 해결했는지 구체적인 경험을 들어 설명하세요. Cache-Control 헤더 설정, CDN 활용, 캐시 무효화 전략 등을 실무적으로 접근할 수 있어야 합니다.
+
+</Callout>

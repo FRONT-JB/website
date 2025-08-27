@@ -1,0 +1,512 @@
+---
+title: SPA (Single Page Application)
+description: SPA의 개념과 장단점, 구현 방법에 대해 설명합니다.
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+<Callout type="info">
+**중요도: ⭐⭐⭐⭐⭐**
+
+현대 웹 애플리케이션의 핵심 아키텍처 패턴입니다.
+
+</Callout>
+
+## 개념
+
+SPA(Single Page Application)는 하나의 HTML 페이지와 애플리케이션 실행에 필요한 JavaScript와 CSS 같은 모든 자산을 로드하는 애플리케이션입니다.
+
+페이지 또는 후속 페이지의 상호작용은 서버로부터 새로운 페이지를 불러오지 않으므로 페이지가 다시 로드되지 않습니다.
+
+## 전통적인 MPA vs SPA
+
+### MPA (Multi Page Application)
+
+```
+사용자 요청 → 서버 → 새로운 HTML 페이지 → 브라우저 렌더링
+     ↑                                           ↓
+   페이지 리로드 ←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←
+```
+
+### SPA (Single Page Application)
+
+```
+초기 로드 → HTML + CSS + JS → 브라우저에서 렌더링
+사용자 요청 → JavaScript → API 호출 → JSON 데이터 → 동적 UI 업데이트
+```
+
+## SPA의 장점
+
+### 1. 빠르고 반응성이 좋음
+
+<Callout type="note">
+  첫 로딩 후에는 페이지 전체를 다시 로드하지 않고 필요한 부분만 업데이트합니다.
+</Callout>
+
+```javascript
+// 전통적인 방식 (MPA)
+// 페이지 이동 시 전체 페이지 리로드
+<a href="/products">상품 목록</a>; // 새로운 HTML 페이지 요청
+
+// SPA 방식
+// JavaScript로 동적 콘텐츠 업데이트
+function navigateToProducts() {
+  // API에서 데이터만 가져옴
+  fetch("/api/products")
+    .then((response) => response.json())
+    .then((products) => {
+      // DOM을 동적으로 업데이트
+      updateProductList(products);
+      // URL을 변경하되 페이지는 리로드하지 않음
+      history.pushState({}, "", "/products");
+    });
+}
+```
+
+### 2. 서버에 대한 HTTP 요청 수 감소
+
+```javascript
+// 초기 로드 시 모든 필요한 자산을 한 번에 로드
+// 이후에는 데이터만 API를 통해 주고받음
+
+// 전통적인 방식: 페이지마다 전체 리소스 요청
+// GET /products → HTML + CSS + JS + 이미지 등
+// GET /about → HTML + CSS + JS + 이미지 등
+
+// SPA 방식: 초기에 한 번만 로드, 이후 데이터만 요청
+// GET / → HTML + CSS + JS (한 번만)
+// GET /api/products → JSON 데이터만
+// GET /api/about → JSON 데이터만
+```
+
+### 3. 프론트엔드와 백엔드의 분리
+
+```javascript
+// 백엔드는 API만 제공
+// GET /api/users
+// POST /api/users
+// PUT /api/users/:id
+// DELETE /api/users/:id
+
+// 프론트엔드는 UI 로직만 담당
+class UserComponent {
+  async loadUsers() {
+    const response = await fetch("/api/users");
+    const users = await response.json();
+    this.renderUsers(users);
+  }
+
+  renderUsers(users) {
+    // UI 업데이트 로직
+  }
+}
+```
+
+## SPA의 단점
+
+### 1. 초기 로딩 속도가 느릴 수 있음
+
+<Callout type="warn">
+  모든 JavaScript 코드를 초기에 다운로드하므로 첫 로딩 시간이 길어질 수
+  있습니다.
+</Callout>
+
+```javascript
+// 문제: 모든 코드를 한 번에 로드
+import React from "react";
+import ProductList from "./ProductList";
+import UserProfile from "./UserProfile";
+import AdminPanel from "./AdminPanel"; // 일반 사용자는 사용하지 않음
+import Reports from "./Reports"; // 일부 사용자만 사용
+
+// 해결책: Code Splitting (코드 분할)
+const ProductList = lazy(() => import("./ProductList"));
+const UserProfile = lazy(() => import("./UserProfile"));
+const AdminPanel = lazy(() => import("./AdminPanel"));
+
+// 라우트별 코드 분할
+const App = () => (
+  <Router>
+    <Routes>
+      <Route
+        path="/products"
+        element={
+          <Suspense fallback={<Loading />}>
+            <ProductList />
+          </Suspense>
+        }
+      />
+      <Route
+        path="/admin"
+        element={
+          <Suspense fallback={<Loading />}>
+            <AdminPanel />
+          </Suspense>
+        }
+      />
+    </Routes>
+  </Router>
+);
+```
+
+### 2. SEO에 불리할 수 있음
+
+```javascript
+// 문제: 초기 HTML이 거의 비어있음
+<!DOCTYPE html>
+<html>
+<head>
+  <title>My App</title>
+</head>
+<body>
+  <div id="root"></div> <!-- JavaScript가 실행되기 전까지 비어있음 -->
+  <script src="/bundle.js"></script>
+</body>
+</html>
+
+// 해결책 1: Server-Side Rendering (SSR)
+// Next.js, Nuxt.js 등 사용
+export async function getServerSideProps() {
+  const products = await fetch('https://api.example.com/products');
+  return {
+    props: { products }
+  };
+}
+
+// 해결책 2: Static Site Generation (SSG)
+export async function getStaticProps() {
+  const products = await fetch('https://api.example.com/products');
+  return {
+    props: { products },
+    revalidate: 60 // 60초마다 재생성
+  };
+}
+
+// 해결책 3: 메타 태그 동적 업데이트
+function updateMetaTags(title, description) {
+  document.title = title;
+
+  let metaDescription = document.querySelector('meta[name="description"]');
+  if (metaDescription) {
+    metaDescription.setAttribute('content', description);
+  }
+}
+```
+
+### 3. 보안 문제 발생 가능
+
+```javascript
+// 문제: 모든 로직이 클라이언트에 노출
+const API_KEY = "secret-key-123"; // 이런 식으로 하면 안 됨!
+
+// 클라이언트 사이드에서 중요한 검증
+function isAdmin(user) {
+  return user.role === "admin"; // 클라이언트에서만 검증하면 위험
+}
+
+// 해결책: 서버 사이드 검증 필수
+// 클라이언트
+function checkAdminAccess() {
+  return fetch("/api/admin/check", {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  }).then((response) => response.json());
+}
+
+// 서버
+app.get("/api/admin/check", authenticateToken, (req, res) => {
+  // 서버에서 실제 권한 검증
+  if (req.user.role !== "admin") {
+    return res.status(403).json({ error: "Forbidden" });
+  }
+  res.json({ isAdmin: true });
+});
+```
+
+## SPA 구현 기술
+
+### 1. 클라이언트 사이드 라우팅
+
+```javascript
+// History API 활용
+class Router {
+  constructor() {
+    this.routes = {};
+    this.init();
+  }
+
+  init() {
+    // 뒤로가기/앞으로가기 처리
+    window.addEventListener("popstate", (event) => {
+      this.handleRoute(window.location.pathname);
+    });
+  }
+
+  addRoute(path, component) {
+    this.routes[path] = component;
+  }
+
+  navigate(path) {
+    // URL 변경 (페이지 리로드 없음)
+    history.pushState({}, "", path);
+    this.handleRoute(path);
+  }
+
+  handleRoute(path) {
+    const component = this.routes[path];
+    if (component) {
+      document.getElementById("app").innerHTML = component();
+    }
+  }
+}
+
+// 사용 예시
+const router = new Router();
+router.addRoute("/", () => "<h1>홈 페이지</h1>");
+router.addRoute("/products", () => "<h1>상품 목록</h1>");
+
+// React Router 사용 시
+import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
+
+function App() {
+  return (
+    <BrowserRouter>
+      <nav>
+        <Link to="/">홈</Link>
+        <Link to="/products">상품</Link>
+      </nav>
+
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/products" element={<Products />} />
+        <Route path="/products/:id" element={<ProductDetail />} />
+      </Routes>
+    </BrowserRouter>
+  );
+}
+```
+
+### 2. 상태 관리
+
+```javascript
+// 간단한 상태 관리
+class AppState {
+  constructor() {
+    this.state = {
+      user: null,
+      products: [],
+      cart: [],
+    };
+    this.subscribers = [];
+  }
+
+  setState(newState) {
+    this.state = { ...this.state, ...newState };
+    this.notify();
+  }
+
+  subscribe(callback) {
+    this.subscribers.push(callback);
+  }
+
+  notify() {
+    this.subscribers.forEach((callback) => callback(this.state));
+  }
+}
+
+// Redux 사용 시
+const initialState = {
+  products: [],
+  loading: false,
+  error: null,
+};
+
+function productsReducer(state = initialState, action) {
+  switch (action.type) {
+    case "FETCH_PRODUCTS_START":
+      return { ...state, loading: true };
+    case "FETCH_PRODUCTS_SUCCESS":
+      return { ...state, products: action.payload, loading: false };
+    case "FETCH_PRODUCTS_ERROR":
+      return { ...state, error: action.payload, loading: false };
+    default:
+      return state;
+  }
+}
+```
+
+### 3. API 통신
+
+```javascript
+// API 서비스 클래스
+class ApiService {
+  constructor(baseURL) {
+    this.baseURL = baseURL;
+  }
+
+  async request(endpoint, options = {}) {
+    const url = `${this.baseURL}${endpoint}`;
+    const config = {
+      headers: {
+        "Content-Type": "application/json",
+        ...options.headers,
+      },
+      ...options,
+    };
+
+    try {
+      const response = await fetch(url, config);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error("API request failed:", error);
+      throw error;
+    }
+  }
+
+  // CRUD 메서드들
+  get(endpoint) {
+    return this.request(endpoint);
+  }
+
+  post(endpoint, data) {
+    return this.request(endpoint, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  put(endpoint, data) {
+    return this.request(endpoint, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
+  delete(endpoint) {
+    return this.request(endpoint, {
+      method: "DELETE",
+    });
+  }
+}
+
+// 사용 예시
+const api = new ApiService("https://api.example.com");
+
+// 상품 목록 조회
+const products = await api.get("/products");
+
+// 새 상품 생성
+const newProduct = await api.post("/products", {
+  name: "새 상품",
+  price: 10000,
+});
+```
+
+## 성능 최적화
+
+### 1. 번들 크기 최적화
+
+```javascript
+// Tree Shaking
+// ❌ 전체 라이브러리 import
+import _ from 'lodash';
+const result = _.debounce(callback, 300);
+
+// ✅ 필요한 함수만 import
+import debounce from 'lodash/debounce';
+const result = debounce(callback, 300);
+
+// Webpack Bundle Analyzer로 번들 크기 분석
+npm install --save-dev webpack-bundle-analyzer
+npx webpack-bundle-analyzer build/static/js/*.js
+```
+
+### 2. 캐싱 전략
+
+```javascript
+// Service Worker를 활용한 캐싱
+self.addEventListener("fetch", (event) => {
+  if (event.request.url.includes("/api/")) {
+    // API 요청은 네트워크 우선, 캐시 폴백
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          const responseClone = response.clone();
+          caches.open("api-cache").then((cache) => {
+            cache.put(event.request, responseClone);
+          });
+          return response;
+        })
+        .catch(() => caches.match(event.request)),
+    );
+  } else {
+    // 정적 자산은 캐시 우선
+    event.respondWith(
+      caches
+        .match(event.request)
+        .then((response) => response || fetch(event.request)),
+    );
+  }
+});
+```
+
+## 실제 프로젝트 예시
+
+```javascript
+// React SPA 예시
+import React, { useState, useEffect } from "react";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+
+function App() {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // 초기 로드 시 사용자 인증 상태 확인
+    checkAuthStatus()
+      .then(setUser)
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) {
+    return <div>로딩 중...</div>;
+  }
+
+  return (
+    <Router>
+      <div className="app">
+        <Header user={user} />
+
+        <main>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/products" element={<ProductList />} />
+            <Route path="/products/:id" element={<ProductDetail />} />
+            {user && (
+              <Route path="/profile" element={<Profile user={user} />} />
+            )}
+          </Routes>
+        </main>
+
+        <Footer />
+      </div>
+    </Router>
+  );
+}
+
+export default App;
+```
+
+<Callout type="info">
+**면접 팁**
+
+SPA에 대해 설명할 때는 단순히 장단점만 나열하지 말고, 실제 프로젝트에서 어떤 상황에서 SPA를 선택하는지, 그리고 단점들을 어떻게 해결할 수 있는지까지 함께 설명할 수 있어야 합니다.
+
+</Callout>

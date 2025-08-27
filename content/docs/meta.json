@@ -1,13 +1,3 @@
 {
-  "title": "문서",
-  "pages": [
-    "index",
-    "---개발관련---",
-    "books",
-    "frontend",
-    "---오늘은 여기까지---",
-    "algorithm",
-    "2025",
-    "..."
-  ]
+  "pages": ["personal", "general"]
 }

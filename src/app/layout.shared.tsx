@@ -16,14 +16,9 @@ export const layoutProps = {
           strokeWidth="2"
           strokeLinecap="round"
           strokeLinejoin="round"
-          className="lucide lucide-cloud-sun"
+          className="lucide lucide-line-squiggle-icon lucide-line-squiggle"
         >
-          <path d="M12 2v2" />
-          <path d="m4.93 4.93 1.41 1.41" />
-          <path d="M20 12h2" />
-          <path d="m19.07 4.93-1.41 1.41" />
-          <path d="M15.947 12.65a4 4 0 0 0-5.925-4.128" />
-          <path d="M13 22H7a5 5 0 1 1 4.9-6H13a3 3 0 0 1 0 6Z" />
+          <path d="M7 3.5c5-2 7 2.5 3 4C1.5 10 2 15 5 16c5 2 9-10 14-7s.5 13.5-4 12c-5-2.5.5-11 6-2" />
         </svg>
 
         <span className="text-lg font-bold">Afaik</span>
@@ -32,7 +27,7 @@ export const layoutProps = {
   },
   links: [
     {
-      url: "/docs",
+      url: "/docs/personal",
       icon: <BookIcon />,
       text: "문서",
       active: "nested-url",

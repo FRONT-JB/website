@@ -1,0 +1,126 @@
+---
+title: Critical Rendering Path (CRP)
+description: 브라우저가 HTML, CSS, JavaScript를 받아 화면에 픽셀을 렌더링하기까지의 중요한 단계들을 설명합니다.
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+<Callout type="info">
+**중요도: ⭐⭐⭐⭐**
+
+웹 성능 최적화의 핵심 개념입니다.
+
+</Callout>
+
+Critical Rendering Path(CRP)는 브라우저가 HTML, CSS, JavaScript를 받아 화면에 픽셀을 렌더링하기까지의 중요한 단계들을 말합니다.
+
+## CRP의 주요 단계
+
+### 1. HTML 파싱 → DOM
+
+- HTML 문서를 바이트 → 문자 → 토큰 → 노드 → DOM 순으로 변환
+- 점진적으로 처리되어 부분적 렌더링 가능
+
+### 2. CSS 파싱 → CSSOM
+
+- CSS를 파싱하여 CSSOM(CSS Object Model) 생성
+- CSS는 렌더링 차단 리소스 (render-blocking resource)
+- 모든 CSS가 파싱될 때까지 렌더링 지연
+
+### 3. DOM + CSSOM → Render Tree
+
+- 화면에 표시될 요소들만 포함
+- `display: none` 요소는 제외
+- `visibility: hidden` 요소는 포함 (공간은 차지하므로)
+
+### 4. Layout 계산
+
+- 각 요소의 정확한 크기와 위치 계산
+- viewport 크기 기준으로 상대값을 절대값으로 변환
+
+### 5. Paint
+
+- 레이아웃 정보를 바탕으로 실제 픽셀로 그리기
+
+## 성능 최적화 방법
+
+### 1. HTML 최적화
+
+```html
+<!-- 중요한 CSS를 인라인으로 -->
+<style>
+  /* Above the fold 스타일 */
+  .hero {
+    display: block;
+  }
+</style>
+
+<!-- 비중요한 CSS는 비동기 로드 -->
+<link
+  rel="preload"
+  href="styles.css"
+  as="style"
+  onload="this.onload=null;this.rel='stylesheet'"
+/>
+```
+
+### 2. CSS 최적화
+
+```css
+/* CSS 파일 크기 최소화 */
+/* 미사용 CSS 제거 */
+/* CSS 압축 */
+```
+
+### 3. JavaScript 최적화
+
+```html
+<!-- 비동기 로드 -->
+<script async src="analytics.js"></script>
+
+<!-- 지연 로드 -->
+<script defer src="app.js"></script>
+
+<!-- 중요하지 않은 스크립트는 나중에 로드 -->
+<script>
+  window.addEventListener("load", function () {
+    const script = document.createElement("script");
+    script.src = "non-critical.js";
+    document.head.appendChild(script);
+  });
+</script>
+```
+
+### 4. 리소스 우선순위 제어
+
+```html
+<!-- DNS 사전 조회 -->
+<link rel="dns-prefetch" href="//example.com" />
+
+<!-- 리소스 사전 로드 -->
+<link rel="preload" href="font.woff2" as="font" type="font/woff2" crossorigin />
+
+<!-- 다음 페이지 사전 로드 -->
+<link rel="prefetch" href="/next-page.html" />
+```
+
+## 측정 도구
+
+- Chrome DevTools Performance 탭
+- Lighthouse
+- WebPageTest
+- Core Web Vitals 지표
+
+## 핵심 지표
+
+- **FCP (First Contentful Paint)**: 첫 번째 콘텐츠가 그려지는 시간
+- **LCP (Largest Contentful Paint)**: 가장 큰 콘텐츠가 그려지는 시간
+- **CLS (Cumulative Layout Shift)**: 레이아웃 이동 점수
+- **FID (First Input Delay)**: 첫 번째 입력 응답 시간
+
+<Callout type="info">
+**면접 팁**
+
+CRP에 대해 질문 받을 때는 단순히 단계만 나열하지 말고, 실제 최적화 경험과 구체적인 개선 방법을 함께 설명할 수 있어야 합니다. Above the fold 콘텐츠 최적화, 리소스 우선순위 제어 등 실무적인 관점에서 접근하세요.
+
+</Callout>

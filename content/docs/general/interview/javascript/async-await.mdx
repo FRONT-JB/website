@@ -1,0 +1,454 @@
+---
+title: "Promise와 async/await"
+description: "JavaScript의 비동기 처리 방법"
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+<Callout type="info">
+**중요도: ⭐⭐⭐⭐⭐**
+
+JavaScript 비동기 처리의 핵심 개념으로, 현대 웹 개발에서 필수적입니다.
+
+</Callout>
+
+# Promise와 async/await
+
+**Promise**는 JavaScript에서 비동기 작업을 처리하기 위한 객체이며, **async/await**은 Promise를 더 쉽게 사용할 수 있게 해주는 문법입니다.
+
+### Promise의 기본 개념
+
+#### Promise의 상태
+
+- **Pending**: 초기 상태, 이행하지도 실패하지도 않은 상태
+- **Fulfilled**: 연산이 성공적으로 완료된 상태
+- **Rejected**: 연산이 실패한 상태
+
+```javascript
+// Promise 생성
+function getData() {
+  return new Promise((resolve, reject) => {
+    setTimeout(() => {
+      const success = true;
+      if (success) {
+        resolve({ id: 1, name: "John" });
+      } else {
+        reject(new Error("데이터를 불러올 수 없습니다"));
+      }
+    }, 1000);
+  });
+}
+
+// Promise 사용
+getData()
+  .then((data) => console.log("성공:", data))
+  .catch((error) => console.error("에러:", error))
+  .finally(() => console.log("작업 완료"));
+```
+
+#### Promise 체이닝
+
+```javascript
+// Promise 체이닝 예시
+fetch("/api/user/1")
+  .then((response) => {
+    if (!response.ok) {
+      throw new Error("Network response was not ok");
+    }
+    return response.json();
+  })
+  .then((user) => {
+    console.log("User:", user);
+    // 다음 API 호출
+    return fetch(`/api/posts?userId=${user.id}`);
+  })
+  .then((response) => response.json())
+  .then((posts) => {
+    console.log("Posts:", posts);
+  })
+  .catch((error) => {
+    console.error("Error:", error);
+  });
+```
+
+### async/await
+
+**async/await**는 Promise를 더 직관적으로 사용할 수 있게 해주는 문법입니다.
+
+```javascript
+// async/await 기본 사용법
+async function fetchUser() {
+  try {
+    const response = await fetch("/api/user");
+    const user = await response.json();
+    return user;
+  } catch (error) {
+    console.error("사용자 정보를 불러오는 중 에러:", error);
+    throw error;
+  }
+}
+
+// 사용
+async function main() {
+  try {
+    const user = await fetchUser();
+    console.log("User:", user);
+  } catch (error) {
+    console.log("Failed to fetch user");
+  }
+}
+```
+
+### Promise vs async/await 비교
+
+#### Promise 체이닝 방식
+
+```javascript
+function fetchUserData(userId) {
+  return fetch(`/api/user/${userId}`)
+    .then((response) => response.json())
+    .then((user) => {
+      return fetch(`/api/posts?userId=${user.id}`);
+    })
+    .then((response) => response.json())
+    .then((posts) => {
+      return fetch(`/api/comments?postId=${posts[0].id}`);
+    })
+    .then((response) => response.json())
+    .then((comments) => {
+      return { user, posts, comments };
+    })
+    .catch((error) => {
+      console.error("Error:", error);
+      throw error;
+    });
+}
+```
+
+#### async/await 방식
+
+```javascript
+async function fetchUserData(userId) {
+  try {
+    const userResponse = await fetch(`/api/user/${userId}`);
+    const user = await userResponse.json();
+
+    const postsResponse = await fetch(`/api/posts?userId=${user.id}`);
+    const posts = await postsResponse.json();
+
+    const commentsResponse = await fetch(`/api/comments?postId=${posts[0].id}`);
+    const comments = await commentsResponse.json();
+
+    return { user, posts, comments };
+  } catch (error) {
+    console.error("Error:", error);
+    throw error;
+  }
+}
+```
+
+### 병렬 처리
+
+#### 순차 처리 (느림)
+
+```javascript
+async function sequential() {
+  const user = await fetchUser(); // 1초 소요
+  const posts = await fetchPosts(); // 1초 소요
+  const comments = await fetchComments(); // 1초 소요
+  // 총 3초 소요
+
+  return { user, posts, comments };
+}
+```
+
+#### 병렬 처리 (빠름)
+
+```javascript
+async function parallel() {
+  // 동시에 모든 요청 시작
+  const [user, posts, comments] = await Promise.all([
+    fetchUser(),
+    fetchPosts(),
+    fetchComments(),
+  ]);
+  // 총 1초 소요 (가장 오래 걸리는 작업 기준)
+
+  return { user, posts, comments };
+}
+```
+
+### Promise 유틸리티 메서드
+
+#### Promise.all()
+
+```javascript
+// 모든 Promise가 성공해야 성공
+async function fetchAllData() {
+  try {
+    const results = await Promise.all([
+      fetch("/api/users"),
+      fetch("/api/posts"),
+      fetch("/api/comments"),
+    ]);
+
+    const [users, posts, comments] = await Promise.all(
+      results.map((response) => response.json()),
+    );
+
+    return { users, posts, comments };
+  } catch (error) {
+    // 하나라도 실패하면 여기로
+    console.error("One or more requests failed:", error);
+  }
+}
+```
+
+#### Promise.allSettled()
+
+```javascript
+// 모든 Promise의 결과를 기다림 (성공/실패 무관)
+async function fetchDataSafely() {
+  const results = await Promise.allSettled([
+    fetch("/api/users").then((r) => r.json()),
+    fetch("/api/posts").then((r) => r.json()),
+    fetch("/api/comments").then((r) => r.json()),
+  ]);
+
+  results.forEach((result, index) => {
+    if (result.status === "fulfilled") {
+      console.log(`Request ${index} succeeded:`, result.value);
+    } else {
+      console.log(`Request ${index} failed:`, result.reason);
+    }
+  });
+}
+```
+
+#### Promise.race()
+
+```javascript
+// 가장 먼저 완료되는 Promise의 결과 반환
+async function fetchWithTimeout() {
+  try {
+    const result = await Promise.race([
+      fetch("/api/data").then((r) => r.json()),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Timeout")), 5000),
+      ),
+    ]);
+
+    return result;
+  } catch (error) {
+    if (error.message === "Timeout") {
+      console.log("Request timed out");
+    } else {
+      console.log("Request failed:", error);
+    }
+  }
+}
+```
+
+### 에러 처리
+
+#### Promise의 에러 처리
+
+```javascript
+// .catch()를 사용한 에러 처리
+fetchUserData()
+  .then((data) => {
+    console.log("Success:", data);
+  })
+  .catch((error) => {
+    if (error.name === "NetworkError") {
+      console.log("네트워크 오류가 발생했습니다.");
+    } else if (error.status === 404) {
+      console.log("사용자를 찾을 수 없습니다.");
+    } else {
+      console.log("알 수 없는 오류:", error.message);
+    }
+  });
+```
+
+#### async/await의 에러 처리
+
+```javascript
+// try-catch를 사용한 에러 처리
+async function handleUserData() {
+  try {
+    const data = await fetchUserData();
+    console.log("Success:", data);
+  } catch (error) {
+    if (error.name === "NetworkError") {
+      console.log("네트워크 오류가 발생했습니다.");
+    } else if (error.status === 404) {
+      console.log("사용자를 찾을 수 없습니다.");
+    } else {
+      console.log("알 수 없는 오류:", error.message);
+    }
+  } finally {
+    console.log("작업 완료");
+  }
+}
+```
+
+### 실제 사용 예시
+
+#### API 호출 래퍼 함수
+
+```javascript
+class ApiClient {
+  constructor(baseUrl) {
+    this.baseUrl = baseUrl;
+  }
+
+  async request(endpoint, options = {}) {
+    const url = `${this.baseUrl}${endpoint}`;
+    const config = {
+      headers: {
+        "Content-Type": "application/json",
+        ...options.headers,
+      },
+      ...options,
+    };
+
+    try {
+      const response = await fetch(url, config);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error("API request failed:", error);
+      throw error;
+    }
+  }
+
+  async get(endpoint) {
+    return this.request(endpoint);
+  }
+
+  async post(endpoint, data) {
+    return this.request(endpoint, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async put(endpoint, data) {
+    return this.request(endpoint, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async delete(endpoint) {
+    return this.request(endpoint, {
+      method: "DELETE",
+    });
+  }
+}
+
+// 사용 예시
+const api = new ApiClient("https://api.example.com");
+
+async function manageUser() {
+  try {
+    // 사용자 조회
+    const user = await api.get("/users/1");
+    console.log("User:", user);
+
+    // 사용자 수정
+    const updatedUser = await api.put("/users/1", {
+      name: "Updated Name",
+    });
+    console.log("Updated:", updatedUser);
+  } catch (error) {
+    console.error("User management failed:", error);
+  }
+}
+```
+
+### React에서의 활용
+
+```javascript
+// React Hook에서 async/await 사용
+function useAsyncData(url) {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function fetchData() {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error("Failed to fetch data");
+        }
+
+        const result = await response.json();
+
+        if (!cancelled) {
+          setData(result);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(err.message);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    fetchData();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [url]);
+
+  return { data, loading, error };
+}
+
+// 컴포넌트에서 사용
+function UserProfile({ userId }) {
+  const { data: user, loading, error } = useAsyncData(`/api/users/${userId}`);
+
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error}</div>;
+  if (!user) return <div>No user found</div>;
+
+  return (
+    <div>
+      <h2>{user.name}</h2>
+      <p>{user.email}</p>
+    </div>
+  );
+}
+```
+
+<Callout type="info" title="async/await 사용 시 주의사항">
+
+1. **async 함수는 항상 Promise를 반환**합니다
+2. **await는 async 함수 내부에서만 사용** 가능합니다
+3. **top-level await**는 ES2022부터 모듈에서 지원됩니다
+4. **병렬 처리가 필요한 경우 Promise.all() 활용**하세요
+
+</Callout>
+
+<Callout type="info">
+**면접 팁**
+
+Promise와 async/await에 대해 질문받을 때는 개념 설명과 함께 실제 프로젝트에서 어떻게 활용했는지 구체적인 예시를 들어 설명하세요. API 호출, 에러 처리, 병렬 처리 최적화 등의 실무 경험을 언급하면 좋습니다. 또한 Promise.all(), Promise.race() 등의 유틸리티 메서드 활용 경험도 함께 설명할 수 있어야 합니다.
+
+</Callout>
