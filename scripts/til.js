@@ -107,19 +107,41 @@ function createTIL() {
   const day = String(today.getDate()).padStart(2, "0");
 
   const dateString = `${month.padStart(2, "0")}${day}`;
-  const yearFolder = path.join(
-    __dirname,
-    "..",
-    "content",
-    "docs",
-    year.toString(),
-  );
-  const filePath = path.join(yearFolder, `${dateString}.mdx`);
+  
+  // 현재 월과 비교하여 경로 결정
+  const currentMonth = today.getMonth() + 1; // 1-12
+  const isCurrentMonth = currentMonth === 9; // 현재 9월
+  
+  let targetFolder;
+  if (isCurrentMonth) {
+    // 현재 월이면 personal/year/ 바로 하위에
+    targetFolder = path.join(
+      __dirname,
+      "..",
+      "content",
+      "docs",
+      "personal",
+      year.toString(),
+    );
+  } else {
+    // 현재 월이 아니면 archive 폴더에
+    targetFolder = path.join(
+      __dirname,
+      "..",
+      "content",
+      "docs",
+      "personal",
+      year.toString(),
+      "archive"
+    );
+  }
+  
+  const filePath = path.join(targetFolder, `${dateString}.mdx`);
 
-  // 년도 폴더가 없으면 생성
-  if (!fs.existsSync(yearFolder)) {
-    fs.mkdirSync(yearFolder, { recursive: true });
-    console.log(`📁 ${year} 폴더를 생성했습니다.`);
+  // 대상 폴더가 없으면 생성
+  if (!fs.existsSync(targetFolder)) {
+    fs.mkdirSync(targetFolder, { recursive: true });
+    console.log(`📁 ${targetFolder} 폴더를 생성했습니다.`);
   }
 
   // 파일이 이미 존재하는지 확인
@@ -128,7 +150,15 @@ function createTIL() {
       `📝 ${year}년 ${month}월 ${day}일 TIL 파일이 이미 존재합니다: ${dateString}.mdx`,
     );
     // 파일이 이미 존재해도 meta.json은 업데이트
-    updateMetaJson(yearFolder, dateString);
+    const metaFolder = path.join(
+      __dirname,
+      "..",
+      "content",
+      "docs",
+      "personal",
+      year.toString(),
+    );
+    updateMetaJson(metaFolder, dateString);
     return;
   }
 
@@ -145,7 +175,15 @@ function createTIL() {
   );
 
   // meta.json 업데이트
-  updateMetaJson(yearFolder, dateString);
+  const metaFolder = path.join(
+    __dirname,
+    "..",
+    "content",
+    "docs",
+    "personal",
+    year.toString(),
+  );
+  updateMetaJson(metaFolder, dateString);
 }
 
 createTIL();
