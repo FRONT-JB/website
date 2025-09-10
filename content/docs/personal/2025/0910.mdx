@@ -1,0 +1,60 @@
+---
+title: "9월 10일"
+description: "크롬 확장프로그램에서의 상태관리"
+---
+
+## 오늘 배운 것 (TIL)
+
+### 크롬 확장프로그램 스토리지 4가지 타입
+
+```typescript
+enum StorageEnum {
+  Local = 'local',      // 로컬 저장, 확장 프로그램 삭제시 삭제
+  Sync = 'sync',        // 클라우드 동기화, 다른 기기와 동기화
+  Managed = 'managed',  // 기업 정책 기반 설정
+  Session = 'session'   // 브라우저 세션 동안만 유지
+}
+```
+
+### 스토리지별 특성
+
+**Local Storage (StorageEnum.Local)**:
+- 가장 빠른 읽기/쓰기 속도
+- 로컬 디스크 기반, 네트워크 지연 없음
+- 용량 제한: ~10MB
+
+**Session Storage (StorageEnum.Session)**:
+- 메모리 기반 (메모리 기반)
+- RAM에 저장되어 가장 빠른 접근
+- 브라우저 재시작시 데이터 소실
+- 용량 제한: ~10MB
+
+**Sync Storage (StorageEnum.Sync)**:
+- 가장 느림 (네트워크 동기화)
+- Google 계정과 동기화로 네트워크 지연 발생
+- 용량 제한: ~100KB (매우 제한적)
+- 동기화 빈도 제한 (분당 몇 회)
+
+**Managed Storage (StorageEnum.Managed)**:
+- 읽기 빠름 (로컬 캐시)
+- 쓰기 불가 (읽기 전용)
+- 기업 정책에 의해 관리
+
+### 메모리 점유율 비교
+
+**Session < Local < Managed < Sync**
+- **Session**: 메모리만 사용, 가장 효율적
+- **Local**: 디스크 + 캐시
+- **Sync**: 디스크 + 캐시 + 동기화 오버헤드
+
+### 권장 사용법
+
+- **빈번한 읽기/쓰기**: Session (임시 데이터)
+- **지속적 저장**: Local (사용자 설정)
+- **다기기 동기화**: Sync (소량 데이터만)
+- **기업 설정**: Managed (읽기 전용)
+
+---
+
+**배운 점**: 크롬 확장프로그램에서 데이터 특성에 따라 적절한 스토리지를 선택하는 것이 성능과 사용자 경험에 큰 영향을 미침
+
