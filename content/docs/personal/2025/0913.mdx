@@ -1,0 +1,87 @@
+---
+title: "9월 13일"
+description: "WXT를 사용한 크롬 확장프로그램 개발 환경 구축"
+---
+
+## 오늘 배운 것 (TIL)
+
+### WXT(Web eXTension Toolkit)란?
+
+WXT는 모던한 웹 확장프로그램 개발을 위한 프레임워크로, Vite 기반의 개발 환경을 제공한다.
+
+**주요 특징**:
+- TypeScript, React, Vue 등 모던 프론트엔드 스택 지원
+- HMR(Hot Module Replacement) 지원으로 개발 생산성 향상
+- 크로스 브라우저 호환성 (Chrome, Firefox, Safari 등)
+- 자동 매니페스트 생성
+
+### 프로젝트 구조 설정
+
+```
+apps/extension/
+├── entrypoints/
+│   ├── background.ts      # 백그라운드 스크립트
+│   ├── content.ts         # 컨텐츠 스크립트
+│   └── popup/             # 팝업 UI
+│       ├── index.html
+│       └── main.tsx
+├── assets/
+│   └── tailwind.css       # 스타일시트
+├── public/
+│   └── icon.svg           # 확장프로그램 아이콘
+└── wxt.config.ts          # WXT 설정
+```
+
+### 핵심 설정 파일들
+
+**wxt.config.ts**:
+```typescript
+import { defineConfig } from "wxt";
+
+export default defineConfig({
+  modules: ["@wxt-dev/module-react"],
+  manifest: {
+    name: "Triad Extension",
+    permissions: ["storage", "activeTab"],
+    host_permissions: ["wss://*/*", "https://*/*"],
+  },
+});
+```
+
+**개발 스크립트 추가**:
+```json
+{
+  "scripts": {
+    "dev:ext": "pnpm turbo run dev --filter @triad/extension",
+    "build:ext": "pnpm turbo run build --filter @triad/extension"
+  }
+}
+```
+
+### UI 컴포넌트 통합
+
+모노레포 환경에서 공통 UI 패키지 활용:
+- `@triad/ui`에서 Button, Card, Badge 컴포넌트 재사용
+- Tailwind CSS 설정 공유
+- TypeScript 경로 별칭 설정으로 `@ui/*` 임포트
+
+### 개발 명령어
+
+```bash
+# 개발 환경 실행 (HMR 지원)
+pnpm dev:ext
+
+# 프로덕션 빌드
+pnpm build:ext
+
+# Chrome 확장프로그램으로 로드
+# → apps/extension/dist/chrome-mv3 폴더를 Chrome에 추가
+```
+
+### 레퍼런스
+
+- [WXT 공식 문서](https://wxt.dev/) - 모던 웹 확장프로그램 개발 툴킷
+
+---
+
+**배운 점**: WXT를 사용하면 기존 웹 개발 경험을 그대로 활용하여 크롬 확장프로그램을 개발할 수 있으며, 모노레포 환경에서 코드 재사용성을 극대화할 수 있다.
