@@ -1,4 +1,4 @@
 {
   "title": "클로드코드 완벽가이드",
-  "pages": ["claude-md", "mode"]
+  "pages": ["claude-md", "mode", "github-worktree", "custom-commands"]
 }
