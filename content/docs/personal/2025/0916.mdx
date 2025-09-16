@@ -1,0 +1,220 @@
+---
+title: "9월 16일"
+description: "2025년 9월 16일에 기록한 내용"
+---
+
+# Radix UI asChild와 forwardRef 관계
+
+## 핵심 문제
+
+Radix UI의 `asChild` prop은 컴포넌트의 기본 렌더링 요소를 자식 요소로 교체하면서 props와 동작을 병합하는 기능. 이때 **forwardRef가 없으면 에러가 발생하는 이유**는 다음과 같음:
+
+## 1. Ref 전달의 필요성
+
+Radix UI 컴포넌트들은 내부적으로 DOM 요소에 직접 접근해야 함:
+- DOM 측정 (위치, 크기 계산)
+- 포커스 관리
+- 이벤트 리스너 등록
+- 접근성 속성 설정
+
+```tsx
+// ❌ forwardRef 없는 컴포넌트
+const MyButton = (props) => <button {...props} />
+
+// ❌ 에러 발생!
+<Tooltip.Trigger asChild>
+  <MyButton>Click me</MyButton>
+</Tooltip.Trigger>
+
+// ✅ forwardRef 있는 컴포넌트  
+const MyButton = React.forwardRef((props, forwardedRef) => (
+  <button {...props} ref={forwardedRef} />
+))
+
+// ✅ 정상 동작
+<Tooltip.Trigger asChild>
+  <MyButton>Click me</MyButton>
+</Tooltip.Trigger>
+```
+
+## 2. Radix UI의 내부 동작
+
+`asChild`를 사용할 때 Radix UI는 다음과 같이 동작함:
+
+```tsx
+// Radix UI 내부 구조 (단순화)
+function Trigger({ asChild, children, ...props }) {
+  const Component = asChild ? Slot : 'button'
+  
+  return (
+    <Component 
+      {...props} 
+      ref={internalRef} // ← 여기서 ref를 전달!
+      onClick={handleClick}
+      onKeyDown={handleKeyDown}
+    >
+      {children}
+    </Component>
+  )
+}
+```
+
+## 3. Slot 컴포넌트의 역할
+
+Radix UI는 내부적으로 `Slot` 컴포넌트를 사용하여 `asChild` 기능을 구현함:
+
+```tsx
+// 정확한 Slot 사용법 - Slot.Root를 사용
+import { Slot } from "@radix-ui/react-slot"
+
+function Button({ asChild, ...props }) {
+  const Comp = asChild ? Slot.Root : "button"
+  return <Comp {...props} />
+}
+```
+
+## 4. ref가 필요한 이유 vs props로 처리되는 것들
+
+### ref가 필요한 기능들 (DOM 직접 접근)
+```tsx
+❌ forwardRef 없을 때 발생하는 문제들:
+- "Warning: Function components cannot be given refs"
+- "Cannot read properties of null (reading 'focus')"  
+- 포지셔닝 계산 실패 (getBoundingClientRect() 등)
+- 포커스 관리 실패 (focus(), blur() 메서드 호출)
+- 동적 접근성 속성 업데이트 실패 (aria-expanded 등)
+```
+
+### props로 처리되는 기능들 (ref 불필요)
+```tsx
+✅ forwardRef 없어도 정상 작동:
+- 이벤트 핸들러 병합 (onClick, onKeyDown 등)
+- 정적 접근성 속성 (aria-label, role 등)
+- 스타일 속성 (className, style 등)
+- 일반적인 HTML 속성들
+```
+
+### 일반 HTML 태그는 왜 ref 없이도 작동하는가?
+
+```tsx
+// ✅ 일반 HTML 태그는 ref 없이도 정상 작동
+<Tooltip.Trigger asChild>
+  <a href="https://example.com">링크</a>  {/* ✅ 문제없음 */}
+</Tooltip.Trigger>
+
+<Dialog.Trigger asChild>
+  <button>버튼</button>  {/* ✅ 문제없음 */}
+</Dialog.Trigger>
+
+// ❌ 커스텀 컴포넌트는 ref 필요
+<Tooltip.Trigger asChild>
+  <CustomButton>커스텀 버튼</CustomButton>  {/* ❌ ref 없으면 에러 */}
+</Tooltip.Trigger>
+```
+
+**이유**: 일반 HTML 태그들(`<a>`, `<button>`, `<div>` 등)은 React의 **내장(intrinsic) 요소**로, React가 자동으로 ref를 처리함. 반면 커스텀 컴포넌트는 명시적으로 `forwardRef`로 ref 전달을 구현해야 함
+
+## 5. 올바른 구현 패턴
+
+```tsx
+// ✅ 올바른 forwardRef 구현
+const CustomButton = React.forwardRef<
+  HTMLButtonElement,
+  React.ButtonHTMLAttributes<HTMLButtonElement>
+>((props, ref) => (
+  <button 
+    {...props} 
+    ref={ref}
+    className="custom-button"
+  />
+))
+
+// ✅ 사용
+<Dialog.Trigger asChild>
+  <CustomButton>Open Dialog</CustomButton>
+</Dialog.Trigger>
+```
+
+## 6. 다중 컴포넌트 조합 예제
+
+```tsx
+// 여러 Radix 컴포넌트를 조합할 때도 forwardRef 필요
+const MyButton = React.forwardRef((props, forwardedRef) => (
+  <button {...props} ref={forwardedRef} />
+));
+
+export default () => {
+  return (
+    <Dialog.Root>
+      <Tooltip.Root>
+        <Tooltip.Trigger asChild>
+          <Dialog.Trigger asChild>
+            <MyButton>Open dialog</MyButton>
+          </Dialog.Trigger>
+        </Tooltip.Trigger>
+        <Tooltip.Portal>...</Tooltip.Portal>
+      </Tooltip.Root>
+      <Dialog.Portal>...</Dialog.Portal>
+    </Dialog.Root>
+  );
+};
+```
+
+## 7. Slot의 이벤트 핸들러 병합
+
+Slot은 이벤트 핸들러를 병합할 때 자식 컴포넌트의 핸들러를 우선시함:
+
+```tsx
+import { Slot } from "@radix-ui/react-slot"
+
+export default () => (
+  <Slot.Root
+    onClick={(event) => {
+      if (!event.defaultPrevented)
+        console.log("부모 핸들러 - 실행되지 않음")
+    }}
+  >
+    <button onClick={(event) => event.preventDefault()} />
+  </Slot.Root>
+)
+```
+
+## 8. 컴포넌트 요구사항 체크리스트
+
+`asChild`와 함께 사용할 컴포넌트가 만족해야 할 조건들:
+
+```tsx
+// ✅ 필수 요구사항 (우선순위별)
+
+1. props 전개 연산자(...props) 적용 - 모든 props 병합을 위해 필수
+2. React.forwardRef 사용 - DOM 접근이 필요한 기능을 위해 필수
+3. ref 전달 - Radix가 DOM 요소에 접근할 수 있도록
+
+// ✅ 올바른 패턴
+const CustomComponent = React.forwardRef<
+  HTMLButtonElement,
+  React.ButtonHTMLAttributes<HTMLButtonElement>
+>((props, ref) => (
+  <button {...props} ref={ref} />
+))
+
+// ❌ props 전개 없으면 이벤트 핸들러도 작동하지 않음
+const WrongComponent = React.forwardRef((props, ref) => (
+  <button ref={ref}>Fixed Text</button> // props 전개 누락!
+))
+```
+
+## 결론
+
+`asChild` 사용 시 **props 전개가 가장 중요**하고, **forwardRef는 DOM 접근이 필요한 경우에 필수**:
+
+1. **props 전개 (`...props`)**: 이벤트 핸들러, 스타일, 접근성 속성 등 모든 props 병합
+2. **forwardRef + ref 전달**: DOM 직접 접근이 필요한 기능들 (포커스, 포지셔닝, 측정)
+
+Slot 컴포넌트는 이러한 복잡한 props와 ref 병합 과정을 내부적으로 처리하여 `asChild` prop의 매끄러운 동작을 보장함
+
+## 참고 문서
+
+- [Radix UI Composition Guide](https://www.radix-ui.com/primitives/docs/guides/composition)  
+- [Radix UI Slot Utility](https://www.radix-ui.com/primitives/docs/utilities/slot)
+- [React forwardRef](https://react.dev/reference/react/forwardRef)
