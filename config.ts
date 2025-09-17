@@ -22,7 +22,7 @@ export const footer: FooterCategory[] = [
 export const blogAuthors: Record<string, AuthorData> = {
   jb: {
     name: "FRONT-JB",
-    title: "프론트엔드",
+    title: "전병길",
     url: "https://github.com/FRONT-JB",
     image_url: "https://avatars.githubusercontent.com/u/85790271?v=4",
   },
