@@ -15,6 +15,7 @@
   "dependencies": {
     "@octokit/rest": "^21.1.0",
     "@resvg/resvg-js": "^2.6.2",
+    "ajv-draft-04": "^1.0.0",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "framer-motion": "^11.11.9",

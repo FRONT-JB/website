@@ -8,6 +8,12 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  serverExternalPackages: [
+    'ajv',
+    'ajv-draft-04',
+    '@scalar/openapi-parser',
+    'fumadocs-openapi'
+  ],
 };
 
 export default withMDX(nextConfig);
