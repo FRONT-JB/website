@@ -1,0 +1,43 @@
+---
+title: "9월 21일"
+description: "2025년 9월 21일에 기록한 내용"
+---
+
+## 오늘 배운 것 (TIL)
+
+### overlay-kit과 Next.js Dynamic Import 최적화
+
+#### 핵심 깨달음
+
+- **Dynamic Import 위치가 중요**: 모듈 레벨에서 `dynamic()` 선언이 Next.js 공식 권장 패턴
+- **번들 분석의 중요성**: 정적 import가 포함된 객체를 dynamic import해도 번들에는 여전히 포함됨
+- **useCallback + 메모이제이션**: 컴포넌트 재생성 방지로 성능 최적화
+
+#### 실용적인 전략
+
+```js
+// ✅ 모듈 레벨에서 선언 (권장)
+const ConfirmDialog = dynamic(() => import("./Confirm"), {
+  ssr: false,
+  loading: () => <div>Loading...</div>,
+});
+
+// ✅ 크기 기준 전략
+// 5KB 미만: 정적 import
+// 20KB 이상: dynamic import
+// 5-20KB: 사용 빈도에 따라
+```
+
+#### 배운 고급 패턴
+
+1. **조건부 로딩**: 필요한 컴포넌트만 동적 로드
+2. **컴포넌트 캐싱**: `useRef`로 중복 로딩 방지
+3. **에러 처리**: `ErrorBoundary`와 폴백 UI
+4. **성능 모니터링**: `performance.now()`로 로딩 시간 측정
+
+#### 문제 해결
+
+- **pnpm workspace 설정**: `packages: ["."]` 누락 에러
+- **ESLint 규칙**: `@ts-ignore` → `@ts-expect-error` 변경
+- **Next.js 15 제약**: Layout에서 export 제한 대응
+- **Git API rate limit**: GitHub token으로 해결
