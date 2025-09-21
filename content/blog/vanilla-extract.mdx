@@ -1,0 +1,707 @@
+---
+title: "Vanilla Extract로 Next.js 스타일링 마스터하기"
+authors: [jb]
+description: "Zero-runtime CSS-in-TypeScript 라이브러리 Vanilla Extract를 Next.js 14+에서 활용하는 완벽 가이드. 테마 시스템부터 고급 패턴까지!"
+image: "/blog/vanilla-extract-thumbnail.webp"
+tags: ["Frontend", "Nextjs", "CSS", "Typescript"]
+---
+
+## CSS-in-JS의 딜레마와 새로운 해결책
+
+<Callout>
+  **Vanilla Extract**는 제로 런타임 CSS-in-TypeScript 라이브러리입니다. 빌드
+  타임에 정적 CSS 파일을 생성하면서도 TypeScript의 타입 안전성을 완벽하게
+  제공합니다. Styled-components나 Emotion과는 달리 **런타임 오버헤드가 전혀
+  없습니다.**
+</Callout>
+
+현대 웹 개발에서 CSS-in-JS는 컴포넌트 기반 스타일링의 표준이 되었지만, 런타임 성능 문제라는 근본적인 한계를 안고 있었습니다. Vanilla Extract는 이러한 딜레마를 해결하며, 특히 Next.js와 같은 SSR 환경에서 탁월한 성능을 발휘합니다.
+
+## Next.js 환경에서의 Vanilla Extract 도입
+
+### 패키지 설치 및 의존성 구성
+
+Vanilla Extract를 Next.js 프로젝트에 통합하기 위해서는 다음 패키지들이 필요합니다.
+
+```bash
+# Next.js 플러그인 (개발 의존성)
+npm install --save-dev @vanilla-extract/next-plugin
+
+# 핵심 라이브러리들
+npm install @vanilla-extract/css @vanilla-extract/sprinkles @vanilla-extract/recipes
+```
+
+### Next.js 빌드 시스템 통합
+
+<Callout>
+  Next.js에서 Vanilla Extract를 사용하려면 **반드시 전용 플러그인을 설정**해야
+  합니다. 이 플러그인은 빌드 타임에 `.css.ts` 파일을 정적 CSS로 변환하는 핵심
+  역할을 담당합니다.
+</Callout>
+
+```js
+// next.config.js
+const { createVanillaExtractPlugin } = require("@vanilla-extract/next-plugin");
+const withVanillaExtract = createVanillaExtractPlugin();
+
+/** @type {import('next').NextConfig} */
+const nextConfig = {};
+
+module.exports = withVanillaExtract(nextConfig);
+```
+
+### 복합 플러그인 환경에서의 설정
+
+MDX나 다른 Next.js 플러그인과 함께 사용할 때는 플러그인 조합 순서가 중요합니다.
+
+```js
+// next.config.js
+const { createVanillaExtractPlugin } = require("@vanilla-extract/next-plugin");
+const withVanillaExtract = createVanillaExtractPlugin();
+
+const withMDX = require("@next/mdx")({
+  extension: /\.mdx$/,
+});
+
+/** @type {import('next').NextConfig} */
+const nextConfig = {};
+
+// 플러그인 순서가 중요합니다
+module.exports = withVanillaExtract(withMDX(nextConfig));
+```
+
+## 기본 스타일링 시스템 구축
+
+### TypeScript 기반 스타일 정의
+
+Vanilla Extract의 핀심은 `.css.ts` 파일에서 TypeScript로 스타일을 정의하는 것입니다. 이를 통해 컴파일 타임에 타입 안전성을 보장받을 수 있습니다.
+
+```ts
+// styles.css.ts
+import { style } from "@vanilla-extract/css";
+
+export const container = style({
+  padding: 10,
+  backgroundColor: "blue",
+  borderRadius: 4,
+  color: "white",
+});
+```
+
+### React 컴포넌트 통합
+
+<Callout>
+  Vanilla Extract에서 생성된 스타일은 **일반적인 CSS 클래스명**으로 사용할 수
+  있습니다. React 컴포넌트에서는 `className` prop에 직접 할당하여 사용합니다.
+</Callout>
+
+```tsx
+// app.tsx
+import { container } from "./styles.css.ts";
+
+export default function App() {
+  return <div className={container}>Hello Vanilla Extract!</div>;
+}
+```
+
+## 기업급 테마 시스템 설계
+
+### CSS 변수 기반 테마 구조
+
+Vanilla Extract의 핵심 강점은 CSS 변수를 활용한 체계적인 테마 시스템입니다. 이를 통해 다크 모드, 브랜드 커스텀마이징 등을 원활하게 처리할 수 있습니다.
+
+```ts
+// theme.css.ts
+import { createTheme } from "@vanilla-extract/css";
+
+export const [themeClass, vars] = createTheme({
+  color: {
+    brand: "blue",
+    accent: "green",
+    background: "white",
+    text: "black",
+  },
+  font: {
+    body: "Arial, sans-serif",
+    heading: "Georgia, serif",
+  },
+});
+
+export const darkTheme = createTheme(vars, {
+  color: {
+    brand: "lightblue",
+    accent: "lightgreen",
+    background: "black",
+    text: "white",
+  },
+  font: {
+    body: "Arial, sans-serif",
+    heading: "Georgia, serif",
+  },
+});
+```
+
+### 테마 계약(Contract) 기반 아키텍처
+
+<Callout>
+  **테마 계약**은 CSS 없이 테마 구조만 정의하는 방식입니다. 이 접근법은 번들
+  분할 최적화와 여러 테마의 독립적 관리를 가능하게 합니다.
+</Callout>
+
+```ts
+// contract.css.ts - 테마 구조만 정의
+import { createThemeContract } from "@vanilla-extract/css";
+
+export const vars = createThemeContract({
+  color: {
+    brand: null,
+    accent: null,
+    background: null,
+    text: null,
+  },
+  font: {
+    body: null,
+    heading: null,
+  },
+});
+```
+
+```ts
+// light-theme.css.ts
+import { createTheme } from "@vanilla-extract/css";
+import { vars } from "./contract.css.ts";
+
+export const lightTheme = createTheme(vars, {
+  color: {
+    brand: "blue",
+    accent: "green",
+    background: "white",
+    text: "black",
+  },
+  font: {
+    body: "Arial, sans-serif",
+    heading: "Georgia, serif",
+  },
+});
+```
+
+## 유틸리티 퍼스트 CSS 시스템
+
+### Sprinkles의 기술적 우위성
+
+<Callout>
+  **Sprinkles**는 Tailwind CSS와 비슷한 유틸리티 퍼스트 접근법을 제공하지만,
+  **빌드 타임 최적화**와 **완전한 타입 안전성**을 동시에 제공합니다.
+</Callout>
+
+### 원자적 CSS 클래스 시스템 구성
+
+```ts
+// sprinkles.css.ts
+import { defineProperties, createSprinkles } from "@vanilla-extract/sprinkles";
+
+// 스페이싱 값들 정의
+const space = {
+  none: 0,
+  small: "4px",
+  medium: "8px",
+  large: "16px",
+  xlarge: "32px",
+};
+
+// 색상 팔레트 정의
+const colors = {
+  "blue-50": "#eff6ff",
+  "blue-100": "#dbeafe",
+  "blue-200": "#bfdbfe",
+  "gray-100": "#f3f4f6",
+  "gray-700": "#374151",
+  "gray-800": "#1f2937",
+  "gray-900": "#111827",
+};
+
+// 반응형 속성들 정의
+const responsiveProperties = defineProperties({
+  conditions: {
+    mobile: {},
+    tablet: { "@media": "screen and (min-width: 768px)" },
+    desktop: { "@media": "screen and (min-width: 1024px)" },
+  },
+  defaultCondition: "mobile",
+  properties: {
+    display: ["none", "flex", "block", "inline"],
+    flexDirection: ["row", "column"],
+    justifyContent: [
+      "stretch",
+      "flex-start",
+      "center",
+      "flex-end",
+      "space-around",
+      "space-between",
+    ],
+    alignItems: ["stretch", "flex-start", "center", "flex-end"],
+    paddingTop: space,
+    paddingBottom: space,
+    paddingLeft: space,
+    paddingRight: space,
+  },
+  shorthands: {
+    padding: ["paddingTop", "paddingBottom", "paddingLeft", "paddingRight"],
+    paddingX: ["paddingLeft", "paddingRight"],
+    paddingY: ["paddingTop", "paddingBottom"],
+    placeItems: ["justifyContent", "alignItems"],
+  },
+});
+
+// 색상 속성들 정의 (다크모드 지원)
+const colorProperties = defineProperties({
+  conditions: {
+    lightMode: {},
+    darkMode: { "@media": "(prefers-color-scheme: dark)" },
+  },
+  defaultCondition: "lightMode",
+  properties: {
+    color: colors,
+    background: colors,
+  },
+});
+
+// 최종 sprinkles 함수 생성
+export const sprinkles = createSprinkles(responsiveProperties, colorProperties);
+export type Sprinkles = Parameters<typeof sprinkles>[0];
+```
+
+### 실전 활용 예제
+
+```ts
+// styles.css.ts
+import { sprinkles } from "./sprinkles.css.ts";
+
+export const responsiveContainer = sprinkles({
+  display: "flex",
+  paddingX: "small",
+  // 반응형 스타일링
+  flexDirection: {
+    mobile: "column",
+    desktop: "row",
+  },
+  // 다크모드 대응
+  background: {
+    lightMode: "blue-50",
+    darkMode: "gray-700",
+  },
+});
+```
+
+<Callout type="info" title="Sprinkles의 장점">
+
+- **타입 안전성**: 잘못된 속성값 사용 시 컴파일 에러
+- **번들 최적화**: 사용되지 않는 스타일은 자동으로 제거
+- **반응형 디자인**: 미디어 쿼리를 간단하게 처리
+
+</Callout>
+
+## 컴포넌트 변형 관리 시스템
+
+### Recipe 패턴의 필요성
+
+<Callout>
+  **Recipe 시스템**은 컴포넌트의 다양한 변형(variant)을 체계적으로 관리하는
+  패턴입니다. 대규모 디자인 시스템에서 컴포넌트의 일관성과 유연성을 동시에
+  확보할 수 있습니다.
+</Callout>
+
+### 기본 Recipe 구조 설계
+
+```ts
+// button.css.ts
+import { recipe } from "@vanilla-extract/recipes";
+
+export const button = recipe({
+  base: {
+    borderRadius: 6,
+    border: "none",
+    cursor: "pointer",
+    fontWeight: "bold",
+  },
+  variants: {
+    color: {
+      neutral: { background: "whitesmoke", color: "black" },
+      brand: { background: "blueviolet", color: "white" },
+      accent: { background: "slateblue", color: "white" },
+    },
+    size: {
+      small: { padding: "8px 12px", fontSize: "14px" },
+      medium: { padding: "12px 16px", fontSize: "16px" },
+      large: { padding: "16px 24px", fontSize: "18px" },
+    },
+    rounded: {
+      true: { borderRadius: 999 },
+    },
+  },
+  // 여러 variant 조합에 대한 특별한 스타일
+  compoundVariants: [
+    {
+      variants: {
+        color: "neutral",
+        size: "large",
+      },
+      style: {
+        background: "ghostwhite",
+      },
+    },
+  ],
+  defaultVariants: {
+    color: "accent",
+    size: "medium",
+  },
+});
+```
+
+### Sprinkles와 Recipe 통합 패턴
+
+고급 디자인 시스템에서 가장 효과적인 접근법은 Sprinkles 유틸리티와 Recipe 시스템을 사리에 맞게 결합하는 것입니다.
+
+```ts
+// advanced-button.css.ts
+import { recipe } from "@vanilla-extract/recipes";
+import { reset } from "./reset.css.ts";
+import { sprinkles } from "./sprinkles.css.ts";
+
+export const advancedButton = recipe({
+  base: [
+    reset, // CSS 리셋
+    sprinkles({
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+    }),
+  ],
+  variants: {
+    color: {
+      neutral: sprinkles({ background: "gray-100" }),
+      brand: sprinkles({ background: "blue-100" }),
+      accent: sprinkles({ background: "blue-200" }),
+    },
+    size: {
+      small: sprinkles({ paddingX: "small", paddingY: "small" }),
+      medium: sprinkles({ paddingX: "medium", paddingY: "medium" }),
+      large: sprinkles({ paddingX: "large", paddingY: "large" }),
+    },
+  },
+  defaultVariants: {
+    color: "accent",
+    size: "medium",
+  },
+});
+```
+
+## 런타임 스타일 제어
+
+### 동적 디자인 시스템 구축
+
+<Callout>
+  사용자 인터랙션이나 API 응답에 따라 **런타임 스타일 업데이트**가 필요한 경우가
+  있습니다. vanilla-extract는 `@vanilla-extract/dynamic` 패키지를 통해 타입
+  안전한 동적 스타일링을 지원합니다.
+</Callout>
+
+```tsx
+// app.tsx
+import { assignInlineVars } from "@vanilla-extract/dynamic";
+import { container, themeVars } from "./theme.css.ts";
+
+interface ContainerProps {
+  brandColor: string;
+  fontFamily: string;
+}
+
+const Container = ({ brandColor, fontFamily }: ContainerProps) => (
+  <section
+    className={container}
+    style={assignInlineVars(themeVars, {
+      color: { brand: brandColor },
+      font: { body: fontFamily },
+    })}
+  >
+    동적 스타일링이 적용된 컨테이너
+  </section>
+);
+```
+
+### 명령형 스타일 제어
+
+DOM API를 활용하여 CSS 변수를 직접 제어하는 방법입니다.
+
+```ts
+// app.ts
+import { setElementVars } from "@vanilla-extract/dynamic";
+import { brandColor, textColor } from "./styles.css.ts";
+
+const el = document.getElementById("myElement");
+
+setElementVars(el, {
+  [brandColor]: "pink",
+  [textColor]: null, // null 값은 할당되지 않음
+});
+```
+
+## 트러블슈팅 가이드
+
+### 주요 이슈 및 해결 방법
+
+#### 외부 라이브러리 통합 이슈
+
+<Callout type="error" title="증상">
+  외부 디자인 시스템 컴포넌트의 스타일이 누락되거나 런타임 에러가 발생하는
+  경우입니다.
+</Callout>
+
+**해결 방법**: Next.js 설정에서 `transpilePackages` 옵션을 활용하여 해당 라이브러리를 트랜스파일 대상에 포함시킵니다.
+
+```js
+// next.config.js
+const nextConfig = {
+  transpilePackages: ["@company/design-system"],
+};
+
+module.exports = withVanillaExtract(nextConfig);
+```
+
+#### Jest 테스트 환경 충돌
+
+<Callout>
+  Jest의 기본 CSS 모킹 설정이 vanilla-extract의 `.css.ts` 파일과 충돌하여 테스트
+  실행에 문제가 발생할 수 있습니다.
+</Callout>
+
+**해결 방법 1**: vanilla-extract 전용 Jest transformer 적용
+
+```json
+// jest.config.js
+{
+  "transform": {
+    "\\.css\\.ts$": "@vanilla-extract/jest-transform"
+  }
+}
+```
+
+**해결 방법 2**: 정규 표현식을 통해 모킹 대상을 정밀하게 제어
+
+```json
+{
+  "jest": {
+    "moduleNameMapper": {
+      "legacy-styles/.*\\.css$": "<rootDir>/styleMock.js"
+    }
+  }
+}
+```
+
+## 성능 최적화 전략
+
+### CSS 클래스명 최적화
+
+<Callout>
+  빌드 환경에 따라 CSS 클래스명 생성 전략을 조정하여 번들 크기를 효과적으로
+  최적화할 수 있습니다.
+</Callout>
+
+```ts
+// next.config.js
+const withVanillaExtract = createVanillaExtractPlugin({
+  identifiers: "short", // 'hnw5tz3' 같은 짧은 해시
+});
+
+// 개발 환경에서는 디버깅을 위해
+const withVanillaExtract = createVanillaExtractPlugin({
+  identifiers: "debug", // 'myfile_mystyle_hnw5tz3' 같은 설명적 이름
+});
+```
+
+### 번들 크기 최적화
+
+반응형 배열 표기법을 활용하여 코드 가독성과 번들 효율성을 동시에 향상시킬 수 있습니다.
+
+```ts
+// sprinkles.css.ts
+const responsiveProperties = defineProperties({
+  conditions: {
+    mobile: {},
+    tablet: { "@media": "screen and (min-width: 768px)" },
+    desktop: { "@media": "screen and (min-width: 1024px)" },
+  },
+  defaultCondition: "mobile",
+  responsiveArray: ["mobile", "tablet", "desktop"], // 순서 정의
+});
+
+// 사용법
+sprinkles({
+  flexDirection: ["column", "row", "row"], // mobile, tablet, desktop 순서
+});
+```
+
+## 실무 적용 가이드
+
+### 컴포넌트 Props 분리 패턴
+
+Sprinkles 스타일 속성과 컴포넌트 고유 속성을 자동으로 분리하여 관리하는 고급 패턴입니다.
+
+```ts
+// 스프링클스 속성인지 확인
+sprinkles.properties.has('paddingX'); // boolean 반환
+
+// 컴포넌트에서 활용
+function MyComponent(props) {
+  const sprinkleProps = {};
+  const otherProps = {};
+
+  Object.keys(props).forEach(key => {
+    if (sprinkles.properties.has(key)) {
+      sprinkleProps[key] = props[key];
+    } else {
+      otherProps[key] = props[key];
+    }
+  });
+
+  return (
+    <div
+      className={sprinkles(sprinkleProps)}
+      {...otherProps}
+    >
+      {props.children}
+    </div>
+  );
+}
+```
+
+### 키프레임 애니메이션 고급 기법
+
+```ts
+import { createVar, keyframes } from "@vanilla-extract/css";
+
+const angle = createVar({
+  syntax: "<angle>",
+  inherits: false,
+  initialValue: "0deg",
+});
+
+export const spin = keyframes({
+  "0%": {
+    vars: { [angle]: "0deg" },
+  },
+  "100%": {
+    vars: { [angle]: "360deg" },
+  },
+});
+```
+
+### CSS 계산 함수 최적화
+
+vanilla-extract의 `@vanilla-extract/css-utils` 패키지는 CSS `calc()` 함수를 타입 안전하게 작성할 수 있는 강력한 유틸리티를 제공합니다.
+
+#### 기본 calc 연산
+
+```ts
+import { calc } from "@vanilla-extract/css-utils";
+
+// 직접 메서드 사용
+const styles = {
+  height: calc.multiply("var(--grid-unit)", 2),
+  width: calc.divide("100vw", 3),
+  margin: calc.negate("var(--space-large)"),
+};
+```
+
+#### 체이닝 API 활용
+
+복잡한 계산식을 체인으로 연결하여 가독성 있게 작성할 수 있습니다.
+
+```ts
+import { calc } from "@vanilla-extract/css-utils";
+
+const complexCalculation = style({
+  // 여러 연산을 체이닝
+  marginTop: calc("var(--space-large)").divide(2).negate().toString(),
+
+  // CSS Grid 계산
+  gridTemplateColumns: calc("100%")
+    .subtract("var(--sidebar-width)")
+    .subtract("var(--padding)")
+    .toString(),
+});
+```
+
+#### 중첩 연산 개선 (v1.8.0+)
+
+최신 버전에서는 중첩된 `calc` 연산이 크게 개선되어 더 직관적인 코드 작성이 가능합니다.
+
+```ts
+// 이전 버전: toString() 명시적 호출 필요
+const oldStyle = {
+  width: calc("10px").add(calc("20px").subtract("4px").toString()),
+};
+
+// 개선된 버전: 자동 처리
+const newStyle = {
+  width: calc("10px").add(calc("20px").subtract("4px")),
+};
+```
+
+#### 테마 변수와의 결합
+
+테마 시스템과 결합하여 동적 계산을 수행할 수 있습니다.
+
+```ts
+import { calc } from "@vanilla-extract/css-utils";
+import { vars } from "./theme.css.ts";
+
+const responsiveContainer = style({
+  // 테마 변수를 활용한 반응형 계산
+  padding: calc(vars.space.medium).multiply(2),
+
+  // 뷰포트 기반 계산
+  maxWidth: calc("100vw").subtract(vars.space.large),
+
+  // 복합 계산식
+  fontSize: calc(vars.fontSize.base)
+    .multiply("var(--scale-factor, 1)")
+    .add("2px"),
+});
+```
+
+#### 유용한 calc 패턴
+
+실무에서 자주 사용되는 유용한 패턴들입니다.
+
+```ts
+import { calc } from "@vanilla-extract/css-utils";
+
+// 센터링 계산
+const centeredElement = style({
+  left: "50%",
+  transform: `translateX(${calc("50%").negate()})`,
+});
+
+// 비율 기반 계산
+const aspectRatioContainer = style({
+  width: "100%",
+  height: calc("100%").multiply(9).divide(16), // 16:9 비율
+});
+
+// 그리드 갭 계산
+const gridItem = style({
+  width: calc("100%").subtract(calc(vars.grid.gap).multiply(2)).divide(3),
+});
+
+// 다중 단위 계산
+const fluidTypography = style({
+  fontSize: calc("1rem").add(calc("2vw")).add(calc("0.5em")),
+});
+```
+
+이러한 `calc` 유틸리티를 활용하면 복잡한 CSS 계산을 타입 안전하게 관리하면서도 코드의 가독성과 유지보수성을 크게 향상시킬 수 있습니다.
+
+## 결론
+
+**vanilla-extract는 Next.js 14+ 환경에서 제로 런타임 CSS-in-TypeScript 솔루션의 새로운 표준을 제시합니다.** 컴파일 타임 최적화와 TypeScript의 타입 안전성을 결합하여, 대규모 프로덕션 애플리케이션에서 요구되는 성능과 개발자 경험을 모두 만족시킬 수 있습니다.

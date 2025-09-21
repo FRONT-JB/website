@@ -1,0 +1,543 @@
+---
+title: 렌더링 성능 최적화 방법
+description: 웹 렌더링 성능을 향상시키는 다양한 최적화 기법에 대해 설명합니다.
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+<Callout type="info">
+**중요도: ⭐⭐⭐⭐⭐**
+
+사용자 경험을 크게 좌우하는 핵심 성능 최적화 기술입니다.
+
+</Callout>
+
+렌더링 성능 최적화는 사용자에게 더 빠르고 부드러운 경험을 제공하기 위한 핵심 기술입니다.
+
+## 주요 최적화 전략
+
+### 1. Critical Rendering Path 최적화
+
+<Callout type="note">
+  첫 화면 렌더링에 필요한 리소스를 우선적으로 로드합니다.
+</Callout>
+
+```html
+<!-- Above-the-fold CSS를 인라인으로 -->
+<style>
+  .hero-section {
+    height: 100vh;
+    background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .hero-title {
+    font-size: 3rem;
+    color: white;
+    text-align: center;
+  }
+</style>
+
+<!-- 비중요한 CSS는 비동기 로드 -->
+<link
+  rel="preload"
+  href="styles.css"
+  as="style"
+  onload="this.onload=null;this.rel='stylesheet'"
+/>
+<noscript><link rel="stylesheet" href="styles.css" /></noscript>
+
+<!-- 중요한 폰트 미리 로드 -->
+<link
+  rel="preload"
+  href="fonts/main-font.woff2"
+  as="font"
+  type="font/woff2"
+  crossorigin
+/>
+```
+
+### 2. 이미지 최적화
+
+```html
+<!-- 반응형 이미지 -->
+<picture>
+  <source media="(max-width: 768px)" srcset="mobile.webp" type="image/webp" />
+  <source media="(max-width: 768px)" srcset="mobile.jpg" />
+  <source srcset="desktop.webp" type="image/webp" />
+  <img src="desktop.jpg" alt="Responsive image" loading="lazy" />
+</picture>
+
+<!-- Intersection Observer를 활용한 Lazy Loading -->
+<img
+  src="placeholder.jpg"
+  data-src="actual-image.jpg"
+  class="lazy-image"
+  alt="Lazy loaded image"
+/>
+```
+
+#### JavaScript를 통한 이미지 최적화
+
+```javascript
+// Intersection Observer로 이미지 지연 로딩
+const imageObserver = new IntersectionObserver((entries) => {
+  entries.forEach((entry) => {
+    if (entry.isIntersecting) {
+      const img = entry.target;
+
+      // 실제 이미지 로드
+      const actualSrc = img.dataset.src;
+      if (actualSrc) {
+        img.src = actualSrc;
+        img.classList.remove("lazy-image");
+        img.classList.add("loaded");
+      }
+
+      imageObserver.unobserve(img);
+    }
+  });
+});
+
+// lazy 클래스를 가진 모든 이미지 관찰
+document.querySelectorAll(".lazy-image").forEach((img) => {
+  imageObserver.observe(img);
+});
+
+// 이미지 압축 및 포맷 최적화
+function getOptimalImageSrc(baseSrc, width) {
+  // 디바이스 픽셀 비율 고려
+  const dpr = window.devicePixelRatio || 1;
+  const actualWidth = Math.ceil(width * dpr);
+
+  // WebP 지원 확인
+  const supportsWebP = (function () {
+    const canvas = document.createElement("canvas");
+    return canvas.toDataURL("image/webp").indexOf("data:image/webp") === 0;
+  })();
+
+  const extension = supportsWebP ? ".webp" : ".jpg";
+  return `${baseSrc}-${actualWidth}w${extension}`;
+}
+```
+
+### 3. JavaScript 최적화
+
+```javascript
+// 디바운싱으로 이벤트 최적화
+function debounce(func, wait, immediate = false) {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      timeout = null;
+      if (!immediate) func(...args);
+    };
+
+    const callNow = immediate && !timeout;
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+
+    if (callNow) func(...args);
+  };
+}
+
+// 스로틀링으로 연속 이벤트 제어
+function throttle(func, limit) {
+  let inThrottle;
+  return function executedFunction(...args) {
+    if (!inThrottle) {
+      func.apply(this, args);
+      inThrottle = true;
+      setTimeout(() => (inThrottle = false), limit);
+    }
+  };
+}
+
+// 스크롤 이벤트 최적화
+const optimizedScrollHandler = throttle(() => {
+  const scrollY = window.scrollY;
+
+  // 스크롤 위치에 따른 헤더 스타일 변경
+  if (scrollY > 100) {
+    document.body.classList.add("scrolled");
+  } else {
+    document.body.classList.remove("scrolled");
+  }
+}, 16); // 60fps에 맞춰 16ms
+
+window.addEventListener("scroll", optimizedScrollHandler);
+
+// Intersection Observer로 효율적인 요소 감지
+const contentObserver = new IntersectionObserver(
+  (entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        // 화면에 보일 때만 애니메이션 실행
+        entry.target.classList.add("animate");
+
+        // 필요한 데이터 로드
+        loadContentData(entry.target);
+
+        // 관찰 중단 (한 번만 실행)
+        contentObserver.unobserve(entry.target);
+      }
+    });
+  },
+  {
+    rootMargin: "50px 0px", // 50px 미리 트리거
+    threshold: 0.1,
+  },
+);
+
+document.querySelectorAll(".lazy-content").forEach((el) => {
+  contentObserver.observe(el);
+});
+```
+
+### 4. DOM 조작 최적화
+
+<Callout type="warn">
+  잦은 DOM 조작은 리플로우와 리페인트를 발생시켜 성능을 저하시킵니다.
+</Callout>
+
+```javascript
+// ❌ 비효율적인 DOM 조작
+function inefficientUpdate(items) {
+  const container = document.getElementById("container");
+
+  // 매번 DOM에 직접 추가 (매우 느림)
+  items.forEach((item) => {
+    const element = document.createElement("div");
+    element.textContent = item.title;
+    element.className = "item";
+    container.appendChild(element); // 리플로우 발생
+  });
+}
+
+// ✅ 효율적인 DOM 조작
+function efficientUpdate(items) {
+  const container = document.getElementById("container");
+
+  // DocumentFragment 사용
+  const fragment = document.createDocumentFragment();
+
+  items.forEach((item) => {
+    const element = document.createElement("div");
+    element.textContent = item.title;
+    element.className = "item";
+    fragment.appendChild(element); // 메모리에서만 작업
+  });
+
+  // 한 번에 DOM에 추가 (리플로우 1번만 발생)
+  container.appendChild(fragment);
+}
+
+// Virtual Scrolling 구현
+class VirtualScrollList {
+  constructor(container, items, itemHeight = 50, visibleCount = 10) {
+    this.container = container;
+    this.items = items;
+    this.itemHeight = itemHeight;
+    this.visibleCount = visibleCount;
+    this.startIndex = 0;
+
+    this.init();
+  }
+
+  init() {
+    // 전체 높이 설정
+    this.container.style.height = `${this.items.length * this.itemHeight}px`;
+    this.container.style.position = "relative";
+
+    this.render();
+
+    // 스크롤 이벤트 처리
+    this.container.addEventListener(
+      "scroll",
+      throttle(() => this.handleScroll(), 16),
+    );
+  }
+
+  handleScroll() {
+    const scrollTop = this.container.scrollTop;
+    const newStartIndex = Math.floor(scrollTop / this.itemHeight);
+
+    if (newStartIndex !== this.startIndex) {
+      this.startIndex = newStartIndex;
+      this.render();
+    }
+  }
+
+  render() {
+    // 기존 요소 제거
+    this.container.innerHTML = "";
+
+    const endIndex = Math.min(
+      this.startIndex + this.visibleCount,
+      this.items.length,
+    );
+
+    for (let i = this.startIndex; i < endIndex; i++) {
+      const item = this.items[i];
+      const element = document.createElement("div");
+
+      element.style.position = "absolute";
+      element.style.top = `${i * this.itemHeight}px`;
+      element.style.height = `${this.itemHeight}px`;
+      element.textContent = item.title;
+
+      this.container.appendChild(element);
+    }
+  }
+}
+```
+
+### 5. CSS 최적화
+
+```css
+/* GPU 가속 활용 */
+.animated-element {
+  /* will-change로 브라우저에게 변경될 속성 알림 */
+  will-change: transform, opacity;
+
+  /* 하드웨어 가속 강제 활성화 */
+  transform: translateZ(0);
+
+  /* 또는 */
+  transform: translate3d(0, 0, 0);
+}
+
+/* 효율적인 애니메이션 */
+.smooth-animation {
+  /* 리플로우를 발생시키는 속성들 피하기 */
+  /* width: 200px; → transform: scaleX(2); */
+  /* left: 100px; → transform: translateX(100px); */
+
+  /* composite만 발생시키는 속성들 사용 */
+  transform: translateX(100px) scale(1.2);
+  opacity: 0.8;
+}
+
+/* 복잡한 선택자 피하기 */
+/* ❌ 비효율적 */
+div > div > div > .item:nth-child(3n + 1) {
+  color: red;
+}
+
+/* ✅ 효율적 */
+.specific-item {
+  color: red;
+}
+
+/* containment 속성 활용 */
+.independent-section {
+  /* 이 영역의 스타일/레이아웃 변경이 다른 영역에 영향 없음을 명시 */
+  contain: layout style paint;
+}
+
+/* aspect-ratio로 레이아웃 시프트 방지 */
+.video-container {
+  aspect-ratio: 16/9;
+  width: 100%;
+}
+
+.video-container iframe {
+  width: 100%;
+  height: 100%;
+}
+
+/* 폰트 로딩 최적화 */
+@font-face {
+  font-family: "CustomFont";
+  src: url("font.woff2") format("woff2");
+  font-display: swap; /* 폰트 로딩 중 fallback 폰트 표시 */
+}
+```
+
+### 6. requestAnimationFrame 활용
+
+```javascript
+// 부드러운 애니메이션을 위한 프레임 기반 업데이트
+class SmoothAnimator {
+  constructor() {
+    this.animations = new Set();
+    this.isRunning = false;
+  }
+
+  add(animation) {
+    this.animations.add(animation);
+    this.start();
+  }
+
+  remove(animation) {
+    this.animations.delete(animation);
+    if (this.animations.size === 0) {
+      this.stop();
+    }
+  }
+
+  start() {
+    if (!this.isRunning) {
+      this.isRunning = true;
+      this.tick();
+    }
+  }
+
+  stop() {
+    this.isRunning = false;
+  }
+
+  tick() {
+    if (!this.isRunning) return;
+
+    const now = performance.now();
+
+    this.animations.forEach((animation) => {
+      if (animation.update) {
+        const finished = animation.update(now);
+        if (finished) {
+          this.animations.delete(animation);
+        }
+      }
+    });
+
+    if (this.animations.size > 0) {
+      requestAnimationFrame(() => this.tick());
+    } else {
+      this.isRunning = false;
+    }
+  }
+}
+
+// 사용 예시
+const animator = new SmoothAnimator();
+
+function createFadeAnimation(element, duration = 1000) {
+  const startTime = performance.now();
+  const startOpacity = parseFloat(getComputedStyle(element).opacity);
+
+  return {
+    update(now) {
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+
+      // easing 함수 적용
+      const easedProgress = easeOutCubic(progress);
+      element.style.opacity = startOpacity + (1 - startOpacity) * easedProgress;
+
+      return progress >= 1;
+    },
+  };
+}
+
+function easeOutCubic(t) {
+  return 1 - Math.pow(1 - t, 3);
+}
+
+// 애니메이션 실행
+const fadeAnimation = createFadeAnimation(element);
+animator.add(fadeAnimation);
+```
+
+### 7. 성능 측정 및 모니터링
+
+```javascript
+// Performance API를 활용한 성능 측정
+class PerformanceMonitor {
+  constructor() {
+    this.metrics = {};
+    this.initObservers();
+  }
+
+  initObservers() {
+    // Paint 이벤트 관찰
+    new PerformanceObserver((list) => {
+      list.getEntries().forEach((entry) => {
+        if (entry.name === "first-contentful-paint") {
+          this.metrics.fcp = entry.startTime;
+          console.log(`FCP: ${entry.startTime}ms`);
+        }
+      });
+    }).observe({ entryTypes: ["paint"] });
+
+    // Largest Contentful Paint 관찰
+    new PerformanceObserver((list) => {
+      const entries = list.getEntries();
+      const lastEntry = entries[entries.length - 1];
+      this.metrics.lcp = lastEntry.startTime;
+      console.log(`LCP: ${lastEntry.startTime}ms`);
+    }).observe({ entryTypes: ["largest-contentful-paint"] });
+
+    // Layout Shift 관찰
+    new PerformanceObserver((list) => {
+      let clsScore = 0;
+      list.getEntries().forEach((entry) => {
+        if (!entry.hadRecentInput) {
+          clsScore += entry.value;
+        }
+      });
+      this.metrics.cls = clsScore;
+      console.log(`CLS: ${clsScore}`);
+    }).observe({ entryTypes: ["layout-shift"] });
+  }
+
+  // 커스텀 메트릭 측정
+  measureCustom(name, fn) {
+    const start = performance.now();
+    const result = fn();
+    const end = performance.now();
+
+    this.metrics[name] = end - start;
+    console.log(`${name}: ${end - start}ms`);
+
+    return result;
+  }
+
+  // 메트릭을 서버로 전송
+  sendMetrics() {
+    fetch("/analytics/performance", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...this.metrics,
+        timestamp: Date.now(),
+        userAgent: navigator.userAgent,
+        url: window.location.href,
+      }),
+    });
+  }
+}
+
+// 사용
+const monitor = new PerformanceMonitor();
+
+// 페이지 언로드 시 메트릭 전송
+window.addEventListener("beforeunload", () => {
+  monitor.sendMetrics();
+});
+```
+
+## 성능 지표 (Core Web Vitals)
+
+### 주요 지표
+
+- **FCP (First Contentful Paint)**: 첫 번째 콘텐츠 렌더링 시간 (< 1.8초)
+- **LCP (Largest Contentful Paint)**: 가장 큰 콘텐츠 렌더링 시간 (< 2.5초)
+- **FID (First Input Delay)**: 첫 번째 입력 지연 시간 (< 100ms)
+- **CLS (Cumulative Layout Shift)**: 누적 레이아웃 이동 점수 (< 0.1)
+
+### 측정 도구
+
+- **Chrome DevTools Performance** 탭
+- **Lighthouse** (내장 또는 CLI)
+- **WebPageTest** (외부 도구)
+- **Core Web Vitals** 확장 프로그램
+
+<Callout type="warn">
+**최적화 우선순위**
+
+모든 최적화를 한 번에 적용하기보다는 실제 사용자 데이터를 기반으로 병목지점을 파악하고 우선순위를 정하여 단계적으로 적용하는 것이 효과적입니다.
+
+</Callout>

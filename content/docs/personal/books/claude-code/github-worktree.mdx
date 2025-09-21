@@ -1,0 +1,99 @@
+---
+title: "github worktree에 대하여"
+description: "github worktree에 대한 설명"
+---
+
+- 단일 git 저장소에 연결된 여러 개의 작업 디렉터리를 가질 수 있도록 해주는 기능이다.
+- 브랜치 전환 시 stash를 사용하거나 변경사항을 커밋할 필요 없이 효율적으로 작업할 수 있도록 해준다.
+
+## 주요 깃 워크트리 명령어
+
+`git worktree add <path> <branch>`
+
+- 새로운 워크트리 추가
+- `<path>`: 워크트리의 경로
+- `<branch>`: 연결할 브랜치
+
+`git worktree list`
+
+- 현재 리포지토리에 연결된 모든 워크트리의 목록 확인
+
+`git worktree remove <path>`
+
+- `<path>`: 제거할 워크트리의 경로
+
+# worktree.sh
+
+<Callout>worktree 생성 스크립트 예시</Callout>
+
+```bash
+#!/bin/bash
+
+#-----------------------------------------------------------------------
+# 새로운 Git worktree를 생성하고 해당 디렉토리로 이동합니다.
+#
+# ⚠️ 중요: 현재 셸에 영향을 주기 위해서는 이 스크립트를 반드시 source로 실행해야 합니다.
+#
+# 사용법: source ./gwt.sh <워크트리-이름>
+# 예시:  source ./gwt.sh feature-auth
+#-----------------------------------------------------------------------
+
+# 인자가 전달되지 않았는지 확인
+if [ $# -eq 0 ]; then
+    echo "❗ 오류: 워크트리 이름이 제공되지 않았습니다."
+    echo "사용법: source $0 <워크트리-이름>"
+    return 1 # 'exit'를 쓰면 터미널이 종료되므로 'return' 사용
+fi
+
+# 변수 정의 (가독성을 위해)
+ARGUMENT=$1
+WORKTREE_PATH="../worktree/$ARGUMENT"
+
+# 워크트리 생성 시도, 성공하면 해당 디렉토리로 이동
+if git worktree add "$WORKTREE_PATH"; then
+    echo "✅ 워크트리가 성공적으로 생성되었습니다: $WORKTREE_PATH"
+    cd "$WORKTREE_PATH" || return 1
+    echo "📁 현재 디렉토리로 이동했습니다: $(pwd)"
+    claude --dangerously-skip-permissions
+else
+    echo "❌ 워크트리 생성에 실패했습니다."
+    return 1 # 실패 상태 반환
+fi
+```
+
+# worktree cleanup
+
+<Callout>worktree 정리 스크립트 예시</Callout>
+
+```bash
+#!/bin/bash
+
+#-----------------------------------------------------------------------
+# 병합된 Git worktree를 자동으로 정리(삭제)하는 스크립트입니다.
+#
+# ⚠️ 중요: 이 스크립트는 로컬 브랜치를 삭제하므로 주의해서 사용하세요.
+#
+# 사용법: source ./cleanup-worktrees.sh
+#-----------------------------------------------------------------------
+
+echo "🔍 병합된 워크트리를 정리하는 중입니다..."
+
+git worktree list | grep -v "$(git rev-parse --show-toplevel)" | while read worktree branch commit; do
+    branch_name=$(echo $branch | sed 's/\[//g' | sed 's/\]//g')
+
+    # 브랜치가 main에 병합되었는지 확인
+    if git branch --merged main | grep -q "$branch_name"; then
+        echo "🧹 병합된 워크트리 삭제: $worktree (브랜치: $branch_name)"
+        git worktree remove "$worktree"
+        git branch -d "$branch_name"
+    fi
+done
+
+echo "✅ 워크트리 정리가 완료되었습니다!"
+```
+
+<Callout title="출처">
+
+자세한 내용은 [코드팩토리](https://github.com/codefactory-co)를 참조해주세요.
+
+</Callout>

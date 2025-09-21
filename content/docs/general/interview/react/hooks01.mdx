@@ -1,0 +1,300 @@
+---
+title: "useDeferredValue와 useTransition"
+description: "React의 useDeferredValue와 useTransition"
+---
+
+## React의 useDeferredValue와 useTransition은 무엇이고 어떻게 동작하나요?
+
+`useDeferredValue`와 `useTransition`은 React 18에서 도입된 **Concurrent Features**로, UI 업데이트의 우선순위를 조절하여 사용자 경험을 향상시키는 훅들입니다.
+
+<Callout type="info" title="Concurrent Features란?">
+
+Concurrent Features는 React가 여러 작업을 동시에 처리하고, 중요한 업데이트를 우선시하며, 필요에 따라 작업을 일시 중단하거나 재개할 수 있게 해주는 기능들입니다.
+
+</Callout>
+
+### useDeferredValue
+
+`useDeferredValue`는 **값의 업데이트를 지연**시켜 더 중요한 업데이트가 먼저 처리되도록 합니다.
+
+```tsx
+import { useDeferredValue, useState } from "react";
+
+function SearchResults() {
+  const [query, setQuery] = useState("");
+  // 검색어 업데이트를 지연시킴
+  const deferredQuery = useDeferredValue(query);
+
+  return (
+    <div>
+      <input
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="검색어를 입력하세요..."
+      />
+
+      {/* 사용자 입력은 즉시 반영 */}
+      <p>입력 중: {query}</p>
+
+      {/* 검색 결과는 지연되어 업데이트 */}
+      <SearchResultsList query={deferredQuery} />
+    </div>
+  );
+}
+
+function SearchResultsList({ query }: { query: string }) {
+  // 무거운 연산이나 많은 렌더링이 필요한 컴포넌트
+  const results = useMemo(() => {
+    if (!query) return [];
+    // 복잡한 필터링 로직
+    return heavySearchOperation(query);
+  }, [query]);
+
+  return (
+    <ul>
+      {results.map((result) => (
+        <li key={result.id}>{result.title}</li>
+      ))}
+    </ul>
+  );
+}
+```
+
+### useTransition
+
+`useTransition`은 **상태 업데이트를 전환(transition)** 으로 표시하여 우선순위를 낮춥니다.
+
+```tsx
+import { useTransition, useState } from "react";
+
+function ProductFilter() {
+  const [filter, setFilter] = useState("");
+  const [products, setProducts] = useState(allProducts);
+  const [isPending, startTransition] = useTransition();
+
+  const handleFilterChange = (newFilter: string) => {
+    // 즉시 업데이트 (긴급한 업데이트)
+    setFilter(newFilter);
+
+    // 지연 가능한 업데이트 (전환으로 표시)
+    startTransition(() => {
+      const filtered = allProducts.filter((product) =>
+        product.name.toLowerCase().includes(newFilter.toLowerCase()),
+      );
+      setProducts(filtered);
+    });
+  };
+
+  return (
+    <div>
+      <input
+        value={filter}
+        onChange={(e) => handleFilterChange(e.target.value)}
+        placeholder="상품 필터링..."
+      />
+
+      {/* 로딩 상태 표시 */}
+      {isPending && <div>필터링 중...</div>}
+
+      {/* 필터링된 결과 */}
+      <ProductList products={products} />
+    </div>
+  );
+}
+```
+
+### 두 훅의 차이점과 사용 시기
+
+<Callout type="error" title="핵심 차이점">
+
+- **useDeferredValue**: 외부에서 받은 값(props)을 지연시킬 때 사용
+- **useTransition**: 내가 생성하는 상태 업데이트를 지연시킬 때 사용
+
+</Callout>
+
+| 특성          | useDeferredValue           | useTransition                  |
+| ------------- | -------------------------- | ------------------------------ |
+| **사용 목적** | 값 자체의 업데이트 지연    | 상태 변경 함수의 우선순위 조절 |
+| **제어 대상** | 외부 값 (props, 외부 상태) | 내부 상태 업데이트             |
+| **반환값**    | 지연된 값                  | [isPending, startTransition]   |
+| **로딩 상태** | 제공하지 않음              | isPending 제공                 |
+
+### 실제 사용 예시 - 탭 전환
+
+```tsx
+import { useState, useTransition } from "react";
+
+function TabContainer() {
+  const [activeTab, setActiveTab] = useState("home");
+  const [isPending, startTransition] = useTransition();
+
+  const handleTabChange = (tab: string) => {
+    startTransition(() => {
+      setActiveTab(tab);
+    });
+  };
+
+  return (
+    <div>
+      <div className="tabs">
+        {["home", "profile", "settings"].map((tab) => (
+          <button
+            key={tab}
+            onClick={() => handleTabChange(tab)}
+            className={`tab ${activeTab === tab ? "active" : ""} ${
+              isPending ? "loading" : ""
+            }`}
+          >
+            {tab.charAt(0).toUpperCase() + tab.slice(1)}
+          </button>
+        ))}
+      </div>
+
+      {/* 탭 전환 중에도 사용자 상호작용은 차단되지 않음 */}
+      {isPending && <div className="tab-loading">전환 중...</div>}
+
+      <div className="tab-content">
+        {activeTab === "home" && <HomeContent />}
+        {activeTab === "profile" && <ProfileContent />}
+        {activeTab === "settings" && <SettingsContent />}
+      </div>
+    </div>
+  );
+}
+```
+
+### 복잡한 실제 예시 - 데이터 테이블
+
+```tsx
+import { useState, useMemo, useTransition, useDeferredValue } from "react";
+
+interface User {
+  id: number;
+  name: string;
+  email: string;
+  department: string;
+}
+
+function UserTable({ users }: { users: User[] }) {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortField, setSortField] = useState<keyof User>("name");
+  const [isPending, startTransition] = useTransition();
+
+  // 검색어는 즉시 업데이트하되, 실제 필터링은 지연
+  const deferredSearchTerm = useDeferredValue(searchTerm);
+
+  const filteredAndSortedUsers = useMemo(() => {
+    let result = users;
+
+    // 검색 필터링
+    if (deferredSearchTerm) {
+      result = result.filter(
+        (user) =>
+          user.name.toLowerCase().includes(deferredSearchTerm.toLowerCase()) ||
+          user.email.toLowerCase().includes(deferredSearchTerm.toLowerCase()),
+      );
+    }
+
+    // 정렬
+    return result.sort((a, b) => {
+      return a[sortField].toString().localeCompare(b[sortField].toString());
+    });
+  }, [users, deferredSearchTerm, sortField]);
+
+  const handleSortChange = (field: keyof User) => {
+    startTransition(() => {
+      setSortField(field);
+    });
+  };
+
+  const isStale = searchTerm !== deferredSearchTerm || isPending;
+
+  return (
+    <div>
+      {/* 검색 입력은 항상 반응적 */}
+      <input
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+        placeholder="사용자 검색..."
+        className="search-input"
+      />
+
+      {/* 로딩 상태 표시 */}
+      {isStale && <div className="loading-overlay">처리 중...</div>}
+
+      <table className={`user-table ${isStale ? "stale" : ""}`}>
+        <thead>
+          <tr>
+            {(["name", "email", "department"] as const).map((field) => (
+              <th
+                key={field}
+                onClick={() => handleSortChange(field)}
+                className={`sortable ${sortField === field ? "active" : ""}`}
+              >
+                {field.charAt(0).toUpperCase() + field.slice(1)}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {filteredAndSortedUsers.map((user) => (
+            <tr key={user.id}>
+              <td>{user.name}</td>
+              <td>{user.email}</td>
+              <td>{user.department}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <div className="results-count">
+        {filteredAndSortedUsers.length}명의 사용자
+      </div>
+    </div>
+  );
+}
+```
+
+<Callout type="info" title="언제 사용해야 할까?">
+
+**useDeferredValue 사용 시기:**
+
+- 검색 결과, 필터링 결과 등 즉시 업데이트할 필요가 없는 값
+- 외부에서 받은 props나 값을 기반으로 무거운 연산을 할 때
+
+**useTransition 사용 시기:**
+
+- 탭 전환, 페이지 네비게이션 등 사용자가 기다릴 수 있는 업데이트
+- 대량의 데이터 처리나 복잡한 연산을 포함한 상태 변경
+
+</Callout>
+
+### 성능 최적화 팁
+
+```tsx
+// 🎯 Good: Concurrent Features와 메모이제이션 함께 사용
+function OptimizedComponent({ data }) {
+  const [query, setQuery] = useState("");
+  const deferredQuery = useDeferredValue(query);
+  const [isPending, startTransition] = useTransition();
+
+  // 무거운 연산은 메모이제이션
+  const processedData = useMemo(() => {
+    return heavyDataProcessing(data, deferredQuery);
+  }, [data, deferredQuery]);
+
+  const handleUpdate = (newData) => {
+    startTransition(() => {
+      updateData(newData);
+    });
+  };
+
+  return (
+    <div>
+      <input value={query} onChange={(e) => setQuery(e.target.value)} />
+      {isPending && <Spinner />}
+      <ResultsList data={processedData} />
+    </div>
+  );
+}
+```

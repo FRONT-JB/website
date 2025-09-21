@@ -1,0 +1,71 @@
+---
+title: 브라우저 주소창에 URL을 입력했을 때 일어나는 과정
+description: URL 입력부터 페이지 렌더링까지의 전체 프로세스를 상세히 설명합니다.
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+<Callout type="info">
+**중요도: ⭐⭐⭐⭐⭐**
+
+이 질문은 웹 개발의 전체적인 이해도를 평가하는 핵심 질문입니다.
+
+</Callout>
+
+브라우저 주소창에 URL을 입력했을 때 다음과 같은 과정이 일어납니다:
+
+## 1. URL 파싱
+
+- 브라우저가 입력된 URL을 파싱하여 프로토콜, 도메인, 포트, 경로 등을 분석
+- 입력된 문자열이 유효한 URL인지 검증
+
+## 2. DNS 조회
+
+- 브라우저 캐시에서 도메인의 IP 주소 확인
+- 없으면 OS 캐시, 라우터 캐시, ISP 캐시 순서로 확인
+- 모든 캐시에 없으면 DNS 서버에 요청하여 IP 주소 조회
+- 계층적 DNS 조회: 루트 → TLD → 권한 있는 네임서버
+
+## 3. TCP 연결 설정
+
+- IP 주소를 얻은 후 해당 서버와 TCP 3-way handshake 수행
+- SYN → SYN-ACK → ACK 패킷 교환으로 연결 설정
+
+## 4. HTTPS의 경우 TLS 핸드셰이크
+
+- SSL/TLS 인증서 검증
+- 암호화 키 교환
+- 보안 연결 설정
+
+## 5. HTTP 요청 전송
+
+- GET, POST 등의 HTTP 메서드로 요청 전송
+- Headers, Body 등 필요한 데이터 포함
+
+## 6. 서버 응답
+
+- 서버가 요청을 처리하고 HTTP 응답 반환
+- 상태 코드 (200, 404, 500 등)
+- Response Headers
+- HTML, CSS, JS 등의 리소스
+
+## 7. 브라우저 렌더링
+
+- HTML 파싱하여 DOM Tree 구성
+- CSS 파싱하여 CSSOM Tree 구성
+- DOM + CSSOM = Render Tree 생성
+- Layout(Reflow) 계산
+- Paint 및 Composite
+
+## 8. 추가 리소스 로드
+
+- HTML 내 참조된 CSS, JS, 이미지 등 추가 요청
+- 병렬로 다운로드 및 처리
+- JavaScript 실행으로 DOM 조작 가능
+
+<Callout type="info">
+**면접 팁**
+
+이 질문은 웹 개발 전반에 대한 이해도를 평가하는 핵심 질문입니다. 각 단계를 순서대로 설명하되, DNS 캐싱, HTTP 캐싱, 브라우저 렌더링 최적화 등 성능 관련 내용과 실무 경험을 함께 언급하면 더욱 좋은 인상을 줄 수 있습니다.
+
+</Callout>

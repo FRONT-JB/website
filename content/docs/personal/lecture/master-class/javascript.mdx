@@ -1,0 +1,575 @@
+---
+title: "자바스크립트 심화"
+---
+
+import { Mermaid } from "../../../../../components/mermaid";
+
+## 🎯 핵심 개념 요약
+
+- **단일 스레드**: JS는 콜스택 하나로 동작, 웹워커로 병렬 처리 가능
+- **이벤트 루프**: 콜스택 비움 → 마이크로태스크 전체 실행 → 필요시 렌더링 → 1개 매크로태스크 순
+- **this 바인딩**: 기본/암시적/명시적/new/화살표 함수별 규칙 다름
+- **메모리 관리**: 스택(빠름, 제한적) vs 힙(느림, 유연함)
+- **Promise**: 콜백지옥 해결, 3상태(pending/fulfilled/rejected) 관리
+
+## 🔧 런타임 & 스레드
+
+### 메인 스레드의 특징
+
+- **단일 호출 스택**: 한 번에 하나의 작업만 처리
+- **웹워커**: 병렬 처리를 위한 별도 스레드 생성
+- **스레드 안정성**: 경쟁 조건, 데드락 문제 없음
+
+### 경쟁 조건 & 데드락
+
+- **경쟁 조건**: 실행 순서에 따라 결과가 달라지는 현상
+- **데드락**: 서로의 자원을 기다리며 무한 대기
+  - 4가지 조건: 상호배제, 점유대기, 비선점, 순환대기
+
+## 📚 실행 컨텍스트 & this
+
+### 실행 컨텍스트
+
+- **구성 요소**: 변수 객체, 스코프 체인, this
+- **역할**: 코드 실행 환경 정보 관리
+
+### this 바인딩 5가지
+
+1. **기본 바인딩**: 전역 객체 (엄격 모드에선 undefined)
+2. **암시적 바인딩**: 객체 메서드 호출 시 해당 객체
+3. **명시적 바인딩**: call/apply/bind로 직접 지정
+4. **new 바인딩**: 새로 생성된 인스턴스
+5. **화살표 함수**: 상위 스코프의 this 참조 (렉시컬)
+
+### call/apply/bind 비교
+
+```js
+// call: 즉시 실행, 개별 인자
+func.call(thisArg, arg1, arg2);
+
+// apply: 즉시 실행, 배열 인자
+func.apply(thisArg, [arg1, arg2]);
+
+// bind: 지연 실행, 새 함수 반환
+const boundFunc = func.bind(thisArg, arg1);
+```
+
+## 🧠 메모리 구조
+
+### 스택 vs 힙
+
+| 구분     | 스택                                  | 힙                    |
+| -------- | ------------------------------------- | --------------------- |
+| **용도** | 함수 호출 프레임, 작은 원시값, 참조값 | 객체, 배열, 큰 문자열 |
+| **속도** | 빠름                                  | 느림                  |
+| **크기** | 제한적                                | 유연함                |
+| **관리** | 자동                                  | GC + 개발자           |
+
+### 메모리 누수 주의사항
+
+- **불필요한 전역변수** 선언 금지
+- **이벤트 리스너** 정리
+- **DOM 참조** 해제
+- **WeakSet/WeakMap** 활용
+
+### 함수 vs 화살표 함수
+
+```js
+// 일반 함수: 호출 방식에 따라 this 결정
+function regular() {
+  console.log(this); // 호출 시점에 결정
+}
+
+// 화살표 함수: 정의 시점의 상위 스코프 this 참조
+const arrow = () => {
+  console.log(this); // 정의된 위치의 this 고정
+};
+```
+
+- **일반 함수**: 메서드, 생성자, 동적 this 필요시
+- **화살표 함수**: 콜백, 클로저, this 고정 필요시
+
+## 📋 스코프 & 변수
+
+### 렉시컬 환경 (Lexical Environment)
+
+- **전역**: 글로벌 렉시컬 환경 - window(브라우저) / global(Node.js)
+- **함수**: 함수 렉시컬 환경 - 지역변수, 매개변수 포함
+- **환경 레코드**: 식별자 바인딩과 외부 환경 참조 저장
+- **호이스팅**: 선언이 환경 레코드에 미리 등록
+
+### 스코프 체인
+
+- 현재 렉시컬 환경 → 외부 렉시컬 환경 연결
+- 변수 탐색 시 외부 환경 참조로 순차 탐색
+- **대체**: 과거 스코프 체인 → 현재 렉시컬 환경 체인
+
+### 렉시컬 스코프 (정적 스코프)
+
+```js
+// 함수 정의 위치에 따라 스코프 결정
+const name = "global";
+const sayName = () => console.log(name);
+
+const outer = () => {
+  const name = "outer";
+  sayName(); // "global" 출력 (정의 위치 기준)
+};
+
+// 실제 호출 예시
+outer(); // 결과: "global"
+
+// 비교: 동적 스코프라면?
+function dynamicExample() {
+  const name = "dynamic";
+  eval("console.log(name)"); // 동적으로 평가되어 "dynamic" 출력
+}
+```
+
+- **핵심**: 정의된 위치에서 스코프 결정 (호출 위치X)
+- **활용**: 클로저로 private 변수 구현
+
+## 🔧 메모리 관리
+
+### Chrome DevTools 활용
+
+- **Memory 탭**: 힙 스냅샷으로 메모리 누수 추적
+- **Performance 탭**: GC 실행 시점 분석
+- **Sources 탭**: 메모리 사용량 실시간 모니터링
+
+## ⚡ 이벤트 루프
+
+### 구조 및 실행 순서
+
+<Mermaid
+  chart="
+graph TD
+  A[콜스택] --> B{스택 비어있음?}
+  B -->|Yes| C[마이크로태스크 큐]
+  C --> D[모든 마이크로태스크 실행]
+  D --> E[렌더링 파이프라인]
+  E --> F[매크로태스크 큐]
+  F --> G[1개 매크로태스크 실행]
+  G --> A
+"
+/>
+
+### 태스크 큐 종류
+
+| 큐 타입            | 포함 내용                           | 우선순위 |
+| ------------------ | ----------------------------------- | -------- |
+| **마이크로태스크** | Promise.then, queueMicrotask        | 🔥 높음  |
+| **매크로태스크**   | setTimeout, setInterval, DOM 이벤트 | 🔥 낮음  |
+
+### 브라우저 렌더링 파이프라인
+
+1. **파싱**: HTML → DOM, CSS → CSSOM
+2. **렌더 트리**: DOM + CSSOM 결합
+3. **레이아웃**: 요소 위치 계산
+4. **페인팅**: 실제 픽셀 그리기
+
+**중요**: 렌더링은 매 이벤트 루프 틱마다 실행되지 않음. 브라우저가 필요하다고 판단할 때만 실행 (60fps 제한)
+
+## 🔄 비동기 처리
+
+### 콜백 vs Promise
+
+```js
+// 콜백 지옥 😵
+getData(function (a) {
+  getMoreData(a, function (b) {
+    getMoreData(b, function (c) {
+      // 깊어지는 중첩...
+    });
+  });
+});
+
+// Promise 체이닝 ✨
+getData()
+  .then((a) => getMoreData(a))
+  .then((b) => getMoreData(b))
+  .then((c) => finalOperation(c));
+```
+
+### Promise 상태 관리
+
+- **pending**: 대기 중 ⏳
+- **fulfilled**: 성공 완료 ✅
+- **rejected**: 실패 ❌
+
+**중요**: Promise 상태는 **불가역적**임. 한 번 fulfilled 또는 rejected가 되면 다시 변경될 수 없음
+
+### Promise 병렬 제어 패턴
+
+```js
+// Promise.all: 모두 성공해야 성공
+const results = await Promise.all([api1(), api2(), api3()]);
+
+// Promise.race: 가장 빠른 결과만
+const fastest = await Promise.race([api1(), api2()]);
+
+// Promise.allSettled: 모든 결과 반환 (성공/실패 무관)
+const allResults = await Promise.allSettled([api1(), api2()]);
+```
+
+### 실전 타임아웃 처리
+
+```js
+// AbortController 활용한 타임아웃
+function fetchWithTimeout(url, timeout = 5000) {
+  const controller = new AbortController();
+
+  const timeoutId = setTimeout(() => {
+    controller.abort();
+  }, timeout);
+
+  return fetch(url, { signal: controller.signal }).finally(() =>
+    clearTimeout(timeoutId),
+  );
+}
+```
+
+## 🎓 async/await 추가 개념
+
+### 에러 처리
+
+```js
+// try-catch로 동기식 에러 처리
+async function fetchData() {
+  try {
+    const response = await fetch("/api");
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error:", error);
+    throw error; // 상위로 전파
+  }
+}
+```
+
+### 병렬 vs 순차 실행
+
+```js
+// 순차 실행 (느림)
+const a = await fetchA();
+const b = await fetchB();
+
+// 병렬 실행 (빠름)
+const [a, b] = await Promise.all([fetchA(), fetchB()]);
+```
+
+## 📚 고급 Promise API
+
+### Promise.any 활용
+
+**특징**
+
+- 하나라도 성공하면 즉시 반환 (모든 프로미스 실패 시에만 reject)
+- 다중 접근 경로를 통한 최적화 시나리오에 적합
+
+**활용 사례**
+
+- **CDN 최적화**: 여러 EDGE 위치 중 가장 빠른 응답 선택
+- **위치 정보 수집**: Geolocation API, IP 기반, 사용자 설정 중 가용한 것 사용
+- **실시간 연결**: WebSocket, SSE, HTTP 폴링 중 우선 연결되는 것 선택
+
+```js
+// CDN을 통한 최적화된 리소스 요청
+Promise.any([
+  requestImage("south korea", "image.jpg"),
+  requestImage("eastern usa", "image.jpg"),
+  requestImage("china", "image.jpg"),
+]).then((result) => {
+  // 첫 번째 성공한 응답 사용
+  displayImage(result);
+  // AbortController로 나머지 요청 중단
+  remainingControllers.forEach((ctrl) => ctrl.abort());
+});
+```
+
+### Promise.withResolvers (ES2025)
+
+**기본 문법**
+
+```js
+const { promise, resolve, reject } = Promise.withResolvers();
+
+promise.then(() => {
+  console.log("fulfilled");
+});
+
+resolve(); // 외부에서 제어
+```
+
+**활용 시나리오**
+
+- 외부에서 resolve/reject 제어가 필요한 경우
+- 기존 `new Promise()` 패턴의 간결한 대안
+
+### p-limit를 통한 동시성 제어
+
+```js
+import pLimit from "p-limit";
+
+// 동시에 1개씩만 실행 (순차 처리)
+const limit = pLimit(1);
+
+const tasks = [
+  limit(() => fetchA()),
+  limit(() => fetchB()),
+  limit(() => fetchC()),
+];
+
+const results = await Promise.all(tasks);
+```
+
+**핵심 개념**
+
+- 동시 실행 프로미스 수를 제한
+- 순차 실행 및 리소스 보호에 유용
+
+## 🌐 Web API 심화
+
+### 핵심 Web API 개요
+
+브라우저에서 전역 접근 가능한 기본 API들로, 별도 선언 없이 사용 가능
+
+### 주요 Web API 분류
+
+#### 📡 네트워크 & 통신
+
+- **fetch**: HTTP 통신 및 REST API 호출
+- **WebSocket**: 실시간 양방향 통신
+- **SSE**: 서버 전송 이벤트
+
+#### 💾 저장소 관리
+
+**LocalStorage**
+
+- **특징**: 브라우저 종료 후에도 데이터 유지
+- **주의사항**:
+  - 접근 권한 및 용량 한계 에러 처리 필요
+  - `QuotaExceededError` 방지를 위한 try-catch 구현
+
+**SessionStorage**
+
+- **특징**: 탭 종료 시 데이터 자동 삭제
+- **활용 시나리오**:
+  - 폼 데이터 임시 저장 및 복구
+  - 페이지 전환 간 데이터 전달
+  - 대용량 임시 데이터 보관
+- **권장사항**: 수동 클린업 로직 구현
+
+#### 🎯 사용자 인터페이스
+
+- **Intersection Observer**: DOM 요소 가시성 모니터링
+- **Geolocation**: 사용자 위치 정보 획득
+- **Canvas**: 동적 그래픽 생성 및 조작
+
+#### ⚡ 고성능 처리
+
+**Web Workers**
+
+- **목적**: 메인 스레드 블로킹 방지
+- **통신 방식**: 메모리 공유 없는 메시지 패싱으로 안전한 병렬 처리
+- **활용 케이스**:
+  - 대용량 배열 연산 (filter, map, reduce)
+  - 이미지 처리, 암호화 등 CPU 집약적 작업
+  - 실시간 데이터 처리 및 분석
+
+#### 📋 클립보드 & 공유
+
+**Clipboard API**
+
+- 텍스트 및 이미지 클립보드 조작
+- `navigator.share`: 플랫폼별 네이티브 공유 기능 활용
+
+#### 🔍 시스템 정보
+
+**navigator 객체**
+
+| 속성                  | 용도                   |
+| --------------------- | ---------------------- |
+| `userAgent`           | 브라우저 식별 정보     |
+| `platform`            | 운영체제 정보          |
+| `hardwareConcurrency` | CPU 코어 수            |
+| `deviceMemory`        | 디바이스 메모리 크기   |
+| `connection`          | 네트워크 연결 상태     |
+| `mediaDevices`        | 카메라/마이크 접근권한 |
+
+### 🚨 호환성 고려사항
+
+모든 Web API는 브라우저별 지원 여부가 다르므로, 기능 사용 전 지원 여부 확인 필수
+
+```js
+// 기능 지원 여부 확인 패턴
+if ("serviceWorker" in navigator) {
+  // Service Worker 기능 사용
+}
+
+if (navigator.share) {
+  // 네이티브 공유 기능 사용
+} else {
+  // 대체 공유 방법 제공
+}
+```
+
+## 🗂️ 컬렉션 자료구조
+
+### Map - 키-값 쌍 컬렉션
+
+**특징**
+
+- ES6에서 도입된 **다양한 타입의 키** 지원 컬렉션
+- 객체와 달리 **모든 타입(객체, 함수, 원시값)을 키로 사용 가능**
+- 삽입 순서 보장 및 size 프로퍼티로 크기 추적
+
+**Object 대비 성능 이점**
+
+- **해시 테이블 기반 구현**: 평균 O(1), 최악의 경우 O(n) 시간복잡도
+- **추가/삭제 최적화**: Dictionary Mode 오버헤드 없음
+
+#### V8 엔진의 Hidden Class 문제
+
+**Hidden Class 동작**
+
+- **동적 생성**: 객체 형태에 따라 Hidden Class 자동 생성
+- **변경 시 재생성**: 프로퍼티 추가/삭제 시 새 클래스 생성
+- **Dictionary Mode 전환**: 빈번한 변경 시 성능 저하 모드 진입
+
+**Map의 이점**
+
+- 처음부터 해시 테이블로 설계되어 Dictionary Mode 오버헤드 없음
+- 일관된 성능 보장
+
+### Set - 고유 값 컬렉션
+
+**핵심 특징**
+
+- **중복 불허**: 고유한 값들만 저장
+- **코드 의도 전달**: 자료형만으로 중복 배제 의도 명확화
+- **성능 우위**: `has()` 메서드 평균 O(1) vs Array `includes()` O(n)
+
+**성능 비교**
+
+| 구분     | Array     | Set                  |
+| -------- | --------- | -------------------- |
+| **검색** | O(n)      | 평균 O(1), 최악 O(n) |
+| **접근** | 인덱스    | 순회만               |
+| **용도** | 순서 중요 | 중복 배제            |
+
+**사용 기준**
+
+1. 중복 데이터 허용하지 않을 때
+2. 값 존재 여부를 빈번히 확인할 때
+3. 컬렉션 크기를 자주 확인할 때
+4. 삽입 순서 + 중복 배제가 필요할 때
+5. 집합 연산(합집합, 교집합)이 필요할 때
+
+### WeakSet - 메모리 최적화 객체 컬렉션
+
+**특화 기능**
+
+- **객체 전용**: 원시값 저장 불가
+- **약한 참조**: WeakSet은 객체에 대한 강한 참조를 만들지 않음. 다른 곳에서 참조가 없으면 GC 대상
+- **반복 불가**: keys(), values(), entries() 메서드 없음
+- **크기 확인 불가**: size 프로퍼티 없음
+
+## 🧠 고급 메모리 관리
+
+### WeakRef & FinalizationRegistry (ES2021)
+
+**기본 개념**
+
+```js
+// FinalizationRegistry: GC 시점에 콜백 실행
+const registry = new FinalizationRegistry((heldValue) => {
+  console.log(`${heldValue}가 GC 되었습니다!`);
+});
+
+const obj = { name: "obj" };
+registry.register(obj); // GC 콜백 등록
+
+// WeakRef: 약한 참조 생성
+const weakRef = new WeakRef(obj);
+```
+
+**FinalizationRegistry 특징**
+
+- **목적**: 리소스 해제 핸들링
+- **비결정적 실행**: GC 타이밍에 의존
+- **현실적 제약**: 현대 PC 성능으로 인한 콜백 실행 빈도 저하
+- **활용 시나리오**: 복잡한 연산, 그래픽 작업의 클린업 모니터링
+- **메모리 비용**: 감시 상태 유지로 인한 메모리 점유
+
+**WeakRef와의 차이점**
+
+| 구분       | WeakRef        | FinalizationRegistry |
+| ---------- | -------------- | -------------------- |
+| **기능**   | 약한 참조 생성 | GC 시점 콜백 실행    |
+| **타이밍** | 참조 해제      | GC 완료 후           |
+| **용도**   | 메모리 절약    | 리소스 정리          |
+
+### 클로저와 메모리 누수
+
+**클로저의 메모리 특성**
+
+- **렉시컬 환경 보존**: 정의 시점의 스코프 체인 유지
+- **반환 무관**: 함수 반환 여부와 상관없이 클로저 형성
+- **장기 생존**: 실행 컨텍스트보다 오래 생존 가능
+
+**메모리 누수 방지 패턴**
+
+```js
+// ❌ 메모리 누수 발생
+function createHeavyObject() {
+  const heavyArray = new Array(1000000).fill(0);
+
+  return function () {
+    console.log("heavyArray 전체를 클로저로 유지");
+    // heavyArray 전체가 메모리에 남음
+  };
+}
+
+// ✅ 메모리 효율적 패턴
+function createHeavyObject() {
+  const heavyArray = new Array(1000000).fill(0);
+  const usefulData = heavyArray[0]; // 필요한 데이터만 추출
+
+  return function () {
+    console.log("필요한 데이터만 사용", usefulData);
+    // heavyArray는 GC 대상이 됨
+  };
+}
+```
+
+**메모리 누수 방지 원칙**
+
+- **필요한 데이터만 참조**: 전체 객체 대신 필요한 값만 추출
+- **명시적 해제**: 사용 완료 후 참조 제거
+- **WeakMap/WeakSet 활용**: 자동 메모리 관리 자료구조 사용
+
+### WeakMap - 약한 참조 키-값 맵
+
+**특징**
+
+- **객체 키 전용**: 원시값은 키로 사용 불가
+- **메모리 누수 방지**: DOM 요소와 데이터 연결 시 유용
+- **순환 참조 해결**: 자동으로 참조 해제로 메모리 누수 방지
+
+```js
+// DOM 요소에 데이터 연결 시 WeakMap 활용
+const elementData = new WeakMap();
+const element = document.getElementById("myDiv");
+
+elementData.set(element, { clicks: 0, data: "some data" });
+// element가 DOM에서 제거되면 WeakMap의 데이터도 자동 GC
+```
+
+---
+
+<Callout title="강의 내용을 그대로 옮기지 않고, 제 생각대로 요약하고 정리했습니다.">
+
+자세한 내용은 [프론트엔드 마스터클래스](https://www.inflearn.com/course/%ED%94%84%EB%A1%A0%ED%8A%B8%EC%97%94%EB%93%9C-%EB%A7%88%EC%8A%A4%ED%84%B0%ED%81%B4%EB%9E%98%EC%8A%A4)를 참조해주세요.
+
+</Callout>

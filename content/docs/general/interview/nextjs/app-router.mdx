@@ -1,0 +1,270 @@
+---
+title: "App Router"
+description: "App Router의 장점은 무엇인가요?"
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+<Callout type="info">
+**중요도: ⭐⭐⭐⭐⭐**
+
+Next.js 13+의 핵심 기능으로, 현대 React 개발의 필수 개념입니다.
+
+</Callout>
+
+# App Router
+
+Next.js의 App Router는 기존 Pages Router를 대체하는 **새로운 라우팅 시스템**으로, React의 최신 기능들을 활용하여 더 강력하고 직관적인 개발 경험을 제공합니다.
+
+### 주요 장점들
+
+#### 1. 향상된 라우팅 구조
+
+```
+app/
+├── layout.tsx         # 루트 레이아웃
+├── page.tsx           # 홈페이지
+├── about/
+│   └── page.tsx       # /about
+├── blog/
+│   ├── layout.tsx     # 블로그 전용 레이아웃
+│   ├── page.tsx       # /blog
+│   └── [slug]/
+│       └── page.tsx   # /blog/[slug]
+└── dashboard/
+    ├── layout.tsx
+    ├── page.tsx       # /dashboard
+    ├── settings/
+    │   └── page.tsx   # /dashboard/settings
+    └── analytics/
+        └── page.tsx   # /dashboard/analytics
+```
+
+#### 2. Server Components 기본 지원
+
+```tsx
+// app/products/page.tsx - 서버 컴포넌트 (기본값)
+async function ProductsPage() {
+  // 서버에서 직접 데이터 페칭
+  const products = await fetch("https://api.example.com/products").then((res) =>
+    res.json(),
+  );
+
+  return (
+    <div>
+      <h1>상품 목록</h1>
+      {products.map((product) => (
+        <ProductCard key={product.id} product={product} />
+      ))}
+    </div>
+  );
+}
+
+export default ProductsPage;
+```
+
+#### 3. 레이아웃 시스템 개선
+
+```tsx
+// app/layout.tsx - 루트 레이아웃
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <html lang="ko">
+      <body>
+        <header>공통 헤더</header>
+        <main>{children}</main>
+        <footer>공통 푸터</footer>
+      </body>
+    </html>
+  );
+}
+
+// app/dashboard/layout.tsx - 중첩 레이아웃
+export default function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="dashboard">
+      <nav>대시보드 네비게이션</nav>
+      <main>{children}</main>
+    </div>
+  );
+}
+```
+
+<Callout type="info" title="중요한 변경사항">
+
+1. **기본값이 Server Component**: 클라이언트 사이드 상호작용이 필요한 경우 `'use client'` 지시어 필요
+2. **\_app.js와 \_document.js 대체**: 루트 레이아웃이 이 역할을 담당
+3. **API Routes 위치 변경**: `app/api/` 디렉토리 사용
+
+</Callout>
+
+#### 4. 향상된 데이터 페칭
+
+```tsx
+// Server Component에서 직접 비동기 데이터 페칭
+async function UserProfile({ params }: { params: { id: string } }) {
+  const user = await getUserById(params.id);
+  const posts = await getUserPosts(params.id);
+
+  return (
+    <div>
+      <h1>{user.name}</h1>
+      <Suspense fallback={<div>게시물 로딩 중...</div>}>
+        <UserPosts posts={posts} />
+      </Suspense>
+    </div>
+  );
+}
+
+// 병렬 데이터 페칭
+async function Dashboard() {
+  const [user, analytics, notifications] = await Promise.all([
+    getUser(),
+    getAnalytics(),
+    getNotifications(),
+  ]);
+
+  return (
+    <div>
+      <UserInfo user={user} />
+      <Analytics data={analytics} />
+      <NotificationPanel notifications={notifications} />
+    </div>
+  );
+}
+```
+
+#### 5. 스트리밍과 부분 렌더링
+
+```tsx
+// app/dashboard/page.tsx
+import { Suspense } from "react";
+
+export default function DashboardPage() {
+  return (
+    <div>
+      <h1>대시보드</h1>
+
+      {/* 빠르게 렌더링되는 부분 */}
+      <QuickStats />
+
+      {/* 느린 데이터는 스트리밍으로 처리 */}
+      <Suspense fallback={<ChartSkeleton />}>
+        <SlowChart />
+      </Suspense>
+
+      <Suspense fallback={<TableSkeleton />}>
+        <SlowDataTable />
+      </Suspense>
+    </div>
+  );
+}
+```
+
+#### 6. 특별한 파일들
+
+```
+app/
+├── loading.tsx        # 로딩 UI
+├── error.tsx          # 에러 UI
+├── not-found.tsx      # 404 페이지
+├── global-error.tsx   # 전역 에러 처리
+└── template.tsx       # 템플릿 (state가 유지되지 않음)
+```
+
+```tsx
+// app/loading.tsx - 자동 로딩 UI
+export default function Loading() {
+  return (
+    <div className="flex min-h-screen items-center justify-center">
+      <div className="h-32 w-32 animate-spin rounded-full border-b-2"></div>
+    </div>
+  );
+}
+
+// app/error.tsx - 자동 에러 처리
+("use client");
+
+export default function Error({
+  error,
+  reset,
+}: {
+  error: Error & { digest?: string };
+  reset: () => void;
+}) {
+  return (
+    <div className="error-boundary">
+      <h2>문제가 발생했습니다!</h2>
+      <details>{error.message}</details>
+      <button onClick={reset}>다시 시도</button>
+    </div>
+  );
+}
+```
+
+#### 7. 라우트 그룹과 병렬 라우트
+
+```
+app/
+├── (marketing)/        # 라우트 그룹 (URL에 포함되지 않음)
+│   ├── about/
+│   └── contact/
+├── (shop)/
+│   ├── products/
+│   └── cart/
+└── dashboard/
+    ├── @analytics/     # 병렬 라우트
+    ├── @notifications/
+    └── layout.tsx
+```
+
+```tsx
+// app/dashboard/layout.tsx - 병렬 라우트 사용
+export default function DashboardLayout({
+  children,
+  analytics,
+  notifications,
+}: {
+  children: React.ReactNode;
+  analytics: React.ReactNode;
+  notifications: React.ReactNode;
+}) {
+  return (
+    <div className="dashboard-grid">
+      <main>{children}</main>
+      <aside className="analytics">{analytics}</aside>
+      <aside className="notifications">{notifications}</aside>
+    </div>
+  );
+}
+```
+
+<Callout type="info" title="마이그레이션 전략">
+
+1. **점진적 마이그레이션**: Pages Router와 App Router를 동시에 사용 가능
+2. **기존 API 유지**: Pages Router의 API Routes는 계속 동작
+3. **단계적 전환**: 새로운 페이지부터 App Router로 개발 시작
+
+</Callout>
+
+### 성능상 이점
+
+- **서버 컴포넌트**: 번들 크기 감소 및 초기 로딩 시간 단축
+- **스트리밍**: 페이지 일부분부터 점진적 렌더링
+- **자동 코드 스플리팅**: 더 정교한 청크 분할
+- **향상된 캐싱**: 세밀한 캐시 제어 가능
+
+<Callout type="info">
+**면접 팁**
+
+App Router에 대해 질문받을 때는 Pages Router와의 차이점뿐만 아니라, Server Components와 Client Components의 구분, 캐싱 전략, 라우팅 구조 등을 구체적인 코드 예시와 함께 설명할 수 있어야 합니다. 실제 마이그레이션 경험이나 성능 개선 사례가 있다면 함께 언급하세요.
+
+</Callout>

@@ -1,0 +1,52 @@
+---
+title: "9월 18일"
+description: "2025년 9월 18일에 기록한 내용"
+---
+
+## 오늘 배운 것 (TIL)
+
+### React Profiler로 성능 측정하기
+
+React의 `<Profiler>` 컴포넌트를 사용하면 렌더링 성능을 프로그래밍 방식으로 측정할 수 있다.
+
+#### 기본 사용법
+
+```jsx
+<Profiler id="App" onRender={onRender}>
+  <App />
+</Profiler>
+```
+
+#### 주요 Props
+
+- `id`: 측정 중인 UI 부분을 식별하는 문자열
+- `onRender`: 컴포넌트가 업데이트될 때마다 호출되는 콜백 함수
+
+#### onRender 콜백 매개변수
+
+```javascript
+function onRender(
+  id,             // Profiler id
+  phase,          // "mount", "update", "nested-update"
+  actualDuration, // 실제 렌더링 시간 (ms)
+  baseDuration,   // 메모이제이션 없이 걸리는 예상 시간 (ms)
+  startTime,      // 렌더링 시작 시간
+  commitTime,     // 커밋 시간
+) {
+  console.log("성능 측정:", {
+    id,
+    phase,
+    actualDuration,
+    baseDuration,
+  });
+}
+```
+
+#### 핵심 포인트
+
+- **프로덕션에서는 기본적으로 비활성화됨** - 별도 프로파일링 빌드 필요
+- `actualDuration`과 `baseDuration` 비교로 메모이제이션 효과 확인 가능
+- 여러 Profiler 중첩 사용 가능하지만 오버헤드 고려 필요
+- React DevTools Profiler와 함께 사용하면 더 효과적
+
+성능 최적화가 필요한 컴포넌트를 찾는 데 매우 유용한 도구다.

@@ -1,0 +1,103 @@
+---
+title: 브라우저 렌더링 엔진의 동작 과정
+description: 브라우저 렌더링 엔진이 HTML, CSS, JavaScript를 처리하여 웹페이지를 렌더링하는 상세한 과정을 설명합니다.
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+<Callout type="info">
+**중요도: ⭐⭐⭐⭐⭐**
+
+렌더링 엔진의 이해는 웹 성능 최적화의 핵심입니다.
+
+</Callout>
+
+브라우저 렌더링 엔진은 HTML, CSS, JavaScript를 해석하여 사용자가 볼 수 있는 웹페이지로 변환하는 소프트웨어입니다.
+
+## 주요 렌더링 엔진
+
+- **Webkit**: Safari, 구 Chrome
+- **Blink**: Chrome, Opera, Edge
+- **Gecko**: Firefox
+
+## 렌더링 과정
+
+### 1. HTML 파싱 & DOM Tree 구성
+
+```
+HTML → Tokenizer → Parser → DOM Tree
+```
+
+- HTML 문서를 토큰으로 분해
+- 토큰을 파싱하여 노드 객체 생성
+- 노드들을 트리 구조로 연결하여 DOM 구성
+
+### 2. CSS 파싱 & CSSOM Tree 구성
+
+```
+CSS → Tokenizer → Parser → CSSOM Tree
+```
+
+- CSS 파일과 스타일 태그의 CSS를 파싱
+- 선택자와 속성을 분석하여 스타일 규칙 생성
+- CSSOM (CSS Object Model) 트리 구축
+
+### 3. JavaScript 실행
+
+- HTML 파싱 중 `<script>` 태그를 만나면 파싱 중단
+- JavaScript 엔진이 스크립트 실행
+- DOM 또는 CSSOM 수정 가능
+- `async`, `defer` 속성으로 비동기 실행 가능
+
+### 4. Render Tree 구성
+
+```
+DOM Tree + CSSOM Tree = Render Tree
+```
+
+- DOM의 각 노드에 해당하는 스타일 정보 계산
+- `display: none` 요소는 제외
+- 시각적으로 보이는 요소만 포함
+
+### 5. Layout (Reflow)
+
+- 각 노드의 정확한 위치와 크기 계산
+- viewport 크기를 기준으로 상대적 크기를 절대적 크기로 변환
+- Box Model 계산 (margin, border, padding, content)
+
+### 6. Paint (Repaint)
+
+- Layout에서 계산된 정보를 바탕으로 실제 픽셀로 변환
+- 배경색, 텍스트, 그림자, border 등을 그리기
+- 여러 레이어로 분할하여 처리
+
+### 7. Composite
+
+- 여러 레이어를 합성하여 최종 화면 생성
+- GPU를 활용한 하드웨어 가속 적용
+- 3D transform, opacity 등이 별도 레이어로 처리
+
+## 중요한 특징
+
+### 점진적 렌더링
+
+- 모든 HTML이 파싱되기를 기다리지 않고 부분적으로 화면에 표시
+- 사용자 경험 개선
+
+### JavaScript의 파싱 차단
+
+- `<script>` 태그는 HTML 파싱을 중단시킴
+- `async`: 다운로드는 병렬, 실행 시점에만 파싱 중단
+- `defer`: 다운로드는 병렬, HTML 파싱 완료 후 실행
+
+### 리플로우와 리페인트 최소화
+
+- DOM/CSS 변경 시 렌더링 과정 재실행
+- 성능 최적화를 위해 변경사항 배치 처리
+
+<Callout type="info">
+**면접 팁**
+
+브라우저 렌더링 엔진에 대해 질문받을 때는 단순히 과정만 나열하지 말고, 각 단계에서 발생할 수 있는 성능 이슈와 최적화 방법을 함께 설명하세요. Critical Rendering Path, 리플로우/리페인트 최적화, GPU 가속 활용 등의 실무 경험을 들어 답변하면 좋습니다.
+
+</Callout>

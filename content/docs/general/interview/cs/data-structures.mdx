@@ -1,0 +1,245 @@
+---
+title: 자료구조 (Stack, Queue, List, Map, Set)
+description: 기본 자료구조들의 특징과 차이점에 대해 설명합니다.
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+<Callout type="info">
+**중요도: ⭐⭐⭐⭐**
+
+프로그래밍의 기본이 되는 자료구조들입니다.
+
+</Callout>
+
+## Stack과 Queue
+
+### Stack (스택)
+
+<Callout type="note">**LIFO (Last In First Out) - 후입선출 방식**</Callout>
+
+#### 특징
+
+- 한쪽 끝(top)에서만 삽입과 삭제가 일어남
+- 가장 나중에 들어간 데이터가 가장 먼저 나옴
+
+#### 주요 연산
+
+- **Push**: 스택의 맨 위에 요소 삽입
+- **Pop**: 스택의 맨 위 요소 제거하고 반환
+- **Peek/Top**: 스택의 맨 위 요소 조회 (제거하지 않음)
+- **isEmpty**: 스택이 비어있는지 확인
+
+#### 실제 예시
+
+- 브라우저의 뒤로가기 기능
+- 실행취소 기능 (Undo)
+- 함수 호출 스택 (Call Stack)
+- 수식의 괄호 검사
+
+```javascript
+class Stack {
+  constructor() {
+    this.items = [];
+  }
+
+  push(item) {
+    this.items.push(item);
+  }
+
+  pop() {
+    return this.items.pop();
+  }
+
+  peek() {
+    return this.items[this.items.length - 1];
+  }
+
+  isEmpty() {
+    return this.items.length === 0;
+  }
+}
+
+// 사용 예시
+const stack = new Stack();
+stack.push(1);
+stack.push(2);
+stack.push(3);
+console.log(stack.pop()); // 3
+console.log(stack.peek()); // 2
+```
+
+### Queue (큐)
+
+<Callout type="note">**FIFO (First In First Out) - 선입선출 방식**</Callout>
+
+#### 특징
+
+- 한쪽 끝(rear)에서 삽입, 다른 쪽 끝(front)에서 삭제
+- 가장 먼저 들어간 데이터가 가장 먼저 나옴
+
+#### 주요 연산
+
+- **Enqueue**: 큐의 뒤쪽에 요소 삽입
+- **Dequeue**: 큐의 앞쪽 요소 제거하고 반환
+- **Front**: 큐의 앞쪽 요소 조회
+- **isEmpty**: 큐가 비어있는지 확인
+
+#### 실제 예시
+
+- 프린터 출력 대기열
+- 은행 번호표
+- BFS(너비 우선 탐색) 알고리즘
+- 작업 스케줄링
+
+```javascript
+class Queue {
+  constructor() {
+    this.items = [];
+  }
+
+  enqueue(item) {
+    this.items.push(item);
+  }
+
+  dequeue() {
+    return this.items.shift();
+  }
+
+  front() {
+    return this.items[0];
+  }
+
+  isEmpty() {
+    return this.items.length === 0;
+  }
+}
+
+// 사용 예시
+const queue = new Queue();
+queue.enqueue("first");
+queue.enqueue("second");
+queue.enqueue("third");
+console.log(queue.dequeue()); // 'first'
+console.log(queue.front()); // 'second'
+```
+
+## List, Map, Set
+
+### List (리스트)
+
+<Callout type="note">**순서가 있는 데이터들의 집합**</Callout>
+
+#### 특징
+
+- 순서가 있음 (인덱스로 접근 가능)
+- 중복 허용
+- 동적 크기 조정 가능
+- 삽입/삭제 시 인덱스 자동 조정
+
+#### JavaScript Array 예시
+
+```javascript
+const list = [1, 2, 3, 2, 4]; // 중복 허용
+console.log(list[0]); // 1 - 인덱스로 접근
+list.push(5); // 끝에 추가
+list.splice(1, 1); // 인덱스 1의 요소 제거
+console.log(list); // [1, 3, 2, 4, 5]
+```
+
+### Map (맵)
+
+<Callout type="note">**Key-Value 쌍으로 이루어진 데이터의 집합**</Callout>
+
+#### 특징
+
+- Key는 중복 불가, Value는 중복 가능
+- Key를 통해 Value에 접근
+- 해시 테이블로 구현 (O(1) 평균 접근 시간)
+- 순서가 있음 (삽입 순서 유지)
+
+#### JavaScript Map 예시
+
+```javascript
+const map = new Map();
+map.set("name", "John");
+map.set("age", 30);
+map.set("city", "Seoul");
+
+console.log(map.get("name")); // 'John'
+console.log(map.has("age")); // true
+console.log(map.size); // 3
+
+// 객체와의 차이점
+const obj = { name: "John", age: 30 };
+const mapFromObj = new Map([
+  ["name", "John"],
+  ["age", 30],
+  [1, "number key"], // Map은 다양한 타입의 키 허용
+  [true, "boolean key"],
+]);
+```
+
+### Set (집합)
+
+<Callout type="note">**중복을 허용하지 않는 데이터들의 집합**</Callout>
+
+#### 특징
+
+- 중복 허용하지 않음
+- 순서가 있음 (삽입 순서 유지)
+- 집합 연산 가능 (교집합, 합집합 등)
+- 해시 테이블로 구현
+
+#### JavaScript Set 예시
+
+```javascript
+const set = new Set();
+set.add(1);
+set.add(2);
+set.add(2); // 중복이므로 추가되지 않음
+set.add(3);
+
+console.log(set); // Set(3) {1, 2, 3}
+console.log(set.has(2)); // true
+console.log(set.size); // 3
+
+// 배열의 중복 제거
+const arr = [1, 2, 2, 3, 3, 4];
+const uniqueArr = [...new Set(arr)]; // [1, 2, 3, 4]
+
+// 집합 연산
+const setA = new Set([1, 2, 3]);
+const setB = new Set([2, 3, 4]);
+
+// 합집합
+const union = new Set([...setA, ...setB]); // {1, 2, 3, 4}
+
+// 교집합
+const intersection = new Set([...setA].filter((x) => setB.has(x))); // {2, 3}
+
+// 차집합
+const difference = new Set([...setA].filter((x) => !setB.has(x))); // {1}
+```
+
+## 시간 복잡도 비교
+
+| 자료구조 | 접근 | 검색 | 삽입 | 삭제 |
+| -------- | ---- | ---- | ---- | ---- |
+| Array    | O(1) | O(n) | O(n) | O(n) |
+| Stack    | O(n) | O(n) | O(1) | O(1) |
+| Queue    | O(n) | O(n) | O(1) | O(1) |
+| Map      | -    | O(1) | O(1) | O(1) |
+| Set      | -    | O(1) | O(1) | O(1) |
+
+<Callout type="info">
+**면접에서 자주 묻는 질문**
+
+- "배열과 리스트의 차이점은?"
+- "Map과 Object의 차이점은?"
+- "Set을 언제 사용하는가?"
+- "Stack과 Queue를 실제로 어떤 상황에서 사용해봤는가?"
+
+구체적인 사용 사례와 함께 답변할 수 있도록 준비하세요.
+
+</Callout>

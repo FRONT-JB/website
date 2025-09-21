@@ -1,0 +1,5 @@
+{
+  "title": "프론트엔드",
+  "root": true,
+  "pages": ["nextjs", "interview"]
+}

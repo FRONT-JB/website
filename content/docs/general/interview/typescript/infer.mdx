@@ -1,0 +1,254 @@
+---
+title: "infer"
+description: "TypeScript의 infer 키워드"
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+<Callout type="info">
+**중요도: ⭐⭐⭐⭐**
+
+TypeScript 고급 타입 시스템의 핵심 기능으로, 복잡한 타입 추론에 필수적입니다.
+
+</Callout>
+
+# infer 키워드
+
+TypeScript의 `infer` 키워드는 **조건부 타입(Conditional Types)** 내에서 타입을 추론하고 저장하는 강력한 기능입니다.
+
+### 기본 문법
+
+```typescript
+type MyType<T> = T extends infer U ? U : never;
+```
+
+### 실용적인 예시들
+
+#### 1. 함수의 반환 타입 추출
+
+```typescript
+// 함수의 반환 타입을 추출하는 유틸리티 타입
+type ReturnType<T> = T extends (...args: any[]) => infer R ? R : never;
+
+// 사용 예시
+function getUserInfo() {
+  return { name: "john", age: 30 };
+}
+
+type UserInfo = ReturnType<typeof getUserInfo>; // { name: string; age: number; }
+```
+
+#### 2. 배열의 요소 타입 추출
+
+```typescript
+// 배열에서 요소 타입을 추출
+type ArrayElement<T> = T extends (infer U)[] ? U : never;
+
+// 사용 예시
+type NumberArray = number[];
+type Element = ArrayElement<NumberArray>; // number
+
+type StringArray = string[];
+type StringElement = ArrayElement<StringArray>; // string
+```
+
+#### 3. Promise의 내부 타입 추출
+
+```typescript
+// Promise에서 resolve되는 타입을 추출
+type Awaited<T> = T extends Promise<infer U> ? U : T;
+
+// 사용 예시
+type AsyncData = Promise<{ id: number; name: string }>;
+type Data = Awaited<AsyncData>; // { id: number; name: string; }
+```
+
+<Callout type="error" title="infer 사용 시 주의사항">
+
+1. **조건부 타입에서만 사용 가능**: `infer`는 반드시 `extends` 키워드와 함께 조건부 타입 내에서만 사용할 수 있습니다.
+2. **추론 컨텍스트 필요**: 추론할 수 있는 명확한 타입 정보가 있어야 합니다.
+3. **여러 번 사용 시 유니온 타입**: 같은 타입 매개변수가 여러 위치에서 추론되면 유니온 타입으로 결합됩니다.
+
+</Callout>
+
+### 고급 활용 예시
+
+#### 함수의 매개변수 타입 추출
+
+```typescript
+type Parameters<T> = T extends (...args: infer P) => any ? P : never;
+
+function updateUser(id: number, name: string, age: number) {
+  // 구현 로직
+}
+
+type UpdateUserParams = Parameters<typeof updateUser>; // [number, string, number]
+```
+
+#### 객체의 특정 키 타입 추출
+
+```typescript
+type ValueOf<T, K extends keyof T> = T[K] extends infer V ? V : never;
+
+interface User {
+  id: number;
+  name: string;
+  email: string;
+}
+
+type UserName = ValueOf<User, "name">; // string
+type UserId = ValueOf<User, "id">; // number
+```
+
+### 복잡한 활용 예시
+
+#### 중첩된 배열 타입 추출
+
+```typescript
+// 다차원 배열에서 가장 깊은 요소 타입 추출
+type DeepArrayElement<T> = T extends readonly (infer U)[]
+  ? DeepArrayElement<U>
+  : T;
+
+type NestedArray = number[][][];
+type DeepElement = DeepArrayElement<NestedArray>; // number
+```
+
+#### 함수 체이닝 타입 추출
+
+```typescript
+// 함수 체이닝에서 각 단계의 반환 타입 추출
+type ChainReturnTypes<T> = T extends (...args: any[]) => infer R
+  ? R extends (...args: any[]) => any
+    ? [R, ...ChainReturnTypes<R>]
+    : [R]
+  : never;
+
+// 예시 함수들
+const chain = () => ({
+  step1: () => ({
+    step2: () => "final result",
+  }),
+});
+
+type ChainTypes = ChainReturnTypes<typeof chain>;
+```
+
+#### 조건부 타입과 infer 조합
+
+```typescript
+// API 응답 타입에서 데이터 추출
+type ApiResponse<T> =
+  | {
+      success: true;
+      data: T;
+    }
+  | {
+      success: false;
+      error: string;
+    };
+
+// 성공한 API 응답에서 데이터 타입 추출
+type ExtractApiData<T> = T extends { success: true; data: infer D } ? D : never;
+
+type UserApiResponse = ApiResponse<User>;
+type UserData = ExtractApiData<UserApiResponse>; // User
+```
+
+#### 문자열 리터럴 타입 조작
+
+```typescript
+// 문자열에서 첫 번째 문자 추출
+type Head<T> = T extends `${infer H}${string}` ? H : never;
+
+// 문자열에서 첫 번째 문자를 제외한 나머지 추출
+type Tail<T> = T extends `${string}${infer T}` ? T : never;
+
+// 예시
+type FirstChar = Head<"Hello">; // "H"
+type RestChars = Tail<"Hello">; // "ello"
+```
+
+#### 재귀적 타입 정의
+
+```typescript
+// 배열을 튜플로 변환하는 재귀 타입
+type ArrayToTuple<T extends readonly unknown[]> = T extends readonly [
+  infer First,
+  ...infer Rest,
+]
+  ? [First, ...ArrayToTuple<Rest>]
+  : [];
+
+type ExampleArray = readonly [1, 2, 3, 4];
+type ExampleTuple = ArrayToTuple<ExampleArray>; // [1, 2, 3, 4]
+```
+
+### 실제 프로젝트에서의 활용
+
+#### Redux Action 타입 추출
+
+```typescript
+// Redux 액션에서 payload 타입 추출
+type ExtractPayload<T> = T extends { type: string; payload: infer P }
+  ? P
+  : never;
+
+interface LoginAction {
+  type: "LOGIN";
+  payload: { username: string; token: string };
+}
+
+type LoginPayload = ExtractPayload<LoginAction>;
+// { username: string; token: string }
+```
+
+#### React 컴포넌트 Props 타입 추출
+
+```typescript
+// React 컴포넌트에서 props 타입 추출
+type ComponentProps<T> = T extends React.ComponentType<infer P> ? P : never;
+
+interface ButtonProps {
+  onClick: () => void;
+  disabled?: boolean;
+}
+
+const Button: React.FC<ButtonProps> = (props) => {
+  return <button {...props} />;
+};
+
+type ExtractedProps = ComponentProps<typeof Button>; // ButtonProps
+```
+
+<Callout type="info" title="infer 사용 팁">
+
+1. **명확한 패턴 매칭**: infer는 명확한 타입 패턴이 있을 때 가장 효과적입니다.
+2. **유틸리티 타입 조합**: 기존 유틸리티 타입들과 조합하여 더 강력한 타입을 만들 수 있습니다.
+3. **컴파일러 도움**: TypeScript 컴파일러가 추론할 수 있는 명확한 구조를 제공하세요.
+4. **테스트 타입**: 복잡한 infer 타입은 테스트 케이스를 만들어 검증하는 것이 좋습니다.
+
+</Callout>
+
+### 타입 레벨 프로그래밍
+
+```typescript
+// 조건부 타입과 infer를 활용한 고급 타입 조작
+type IsFunction<T> = T extends (...args: any[]) => any ? true : false;
+type IsArray<T> = T extends any[] ? true : false;
+type IsPromise<T> = T extends Promise<any> ? true : false;
+
+// 타입 체크 예시
+type FnCheck = IsFunction<() => void>; // true
+type ArrCheck = IsArray<string[]>; // true
+type PromiseCheck = IsPromise<Promise<number>>; // true
+```
+
+infer는 TypeScript의 타입 시스템을 최대한 활용할 수 있게 해주는 강력한 도구입니다. 복잡한 타입 조작이 필요한 경우 infer를 사용하여 타입 안전성을 유지하면서도 유연한 타입 정의를 할 수 있습니다.
+
+<Callout type="info">
+**면접 팁**
+
+infer에 대해 질문받을 때는 단순히 문법만 설명하지 말고, 실제 프로젝트에서 어떤 상황에서 사용했는지, 어떤 문제를 해결했는지 구체적인 예시를 들어 설명하세요. 조건부 타입, 유틸리티 타입 구현, 복잡한 타입 추론 등의 실무 활용 경험을 함께 언급하면 좋습니다.
+
+</Callout>

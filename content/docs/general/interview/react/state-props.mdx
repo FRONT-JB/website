@@ -1,0 +1,522 @@
+---
+title: "State와 Props"
+description: "React의 state와 props의 차이점과 사용법"
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+<Callout type="info">
+**중요도: ⭐⭐⭐⭐⭐**
+
+State와 Props는 React 컴포넌트의 핵심 개념으로, 모든 React 개발자가 반드시 이해해야 하는 필수 요소입니다.
+
+</Callout>
+
+## state와 props의 차이를 설명해 주세요.
+
+**State**와 **Props**는 React 컴포넌트에서 데이터를 다루는 두 가지 핵심 개념입니다.
+
+<Callout type="info" title="State vs Props">
+
+- **State**: 컴포넌트 내부에서 관리되는 값으로, 변경 가능하며 변경 시 re-rendering이 발생
+- **Props**: 부모 컴포넌트로부터 전달받는 값으로, 읽기 전용이므로 직접 수정 불가
+
+</Callout>
+
+### State (상태)
+
+#### 기본 개념
+
+```jsx
+import { useState } from 'react';
+
+function Counter() {
+  // state 선언: [현재값, setter함수] = useState(초기값)
+  const [count, setCount] = useState(0);
+  
+  const increment = () => {
+    setCount(count + 1); // state 변경
+  };
+  
+  return (
+    <div>
+      <p>현재 카운트: {count}</p>
+      <button onClick={increment}>증가</button>
+    </div>
+  );
+}
+```
+
+#### State의 특징
+
+1. **컴포넌트 내부에서 관리**됩니다
+2. **값이 변할 수 있으며**, 변할 경우 **re-rendering이 발생**합니다
+3. **비동기적으로 업데이트**됩니다
+
+```jsx
+function StateExample() {
+  const [user, setUser] = useState({
+    name: '',
+    email: '',
+    age: 0
+  });
+  
+  const updateUser = () => {
+    setUser({
+      name: 'John Doe',
+      email: 'john@example.com', 
+      age: 25
+    });
+    // 비동기적으로 업데이트되므로 즉시 반영되지 않음
+    console.log(user); // 여전히 이전 값
+  };
+  
+  return (
+    <div>
+      <p>이름: {user.name}</p>
+      <p>이메일: {user.email}</p>
+      <p>나이: {user.age}</p>
+      <button onClick={updateUser}>사용자 정보 업데이트</button>
+    </div>
+  );
+}
+```
+
+#### 함수형 업데이트
+
+```jsx
+function FunctionalUpdate() {
+  const [count, setCount] = useState(0);
+  
+  // ❌ 클로저 문제 발생 가능
+  const incrementBad = () => {
+    setTimeout(() => {
+      setCount(count + 1); // 이전 값 참조
+    }, 1000);
+  };
+  
+  // ✅ 함수형 업데이트로 해결
+  const incrementGood = () => {
+    setTimeout(() => {
+      setCount(prevCount => prevCount + 1); // 최신 값 보장
+    }, 1000);
+  };
+  
+  return (
+    <div>
+      <p>카운트: {count}</p>
+      <button onClick={incrementBad}>잘못된 증가</button>
+      <button onClick={incrementGood}>올바른 증가</button>
+    </div>
+  );
+}
+```
+
+### Props (속성)
+
+#### 기본 개념
+
+```jsx
+// 자식 컴포넌트
+function UserCard({ user, onEdit }) {
+  return (
+    <div className="user-card">
+      <h3>{user.name}</h3>
+      <p>{user.email}</p>
+      <button onClick={() => onEdit(user.id)}>
+        편집
+      </button>
+    </div>
+  );
+}
+
+// 부모 컴포넌트
+function UserList() {
+  const users = [
+    { id: 1, name: 'John', email: 'john@example.com' },
+    { id: 2, name: 'Jane', email: 'jane@example.com' }
+  ];
+  
+  const handleEdit = (userId) => {
+    console.log('편집:', userId);
+  };
+  
+  return (
+    <div>
+      {users.map(user => (
+        <UserCard 
+          key={user.id}
+          user={user}        // props로 전달
+          onEdit={handleEdit} // 함수도 props로 전달
+        />
+      ))}
+    </div>
+  );
+}
+```
+
+#### Props의 특징
+
+1. **부모 컴포넌트로부터 전달**받습니다
+2. **읽기 전용**이므로 직접 수정할 수 없습니다
+3. **컴포넌트를 재사용 가능**하게 만듭니다
+
+```jsx
+// ❌ Props 직접 수정 시도
+function BadComponent({ title }) {
+  title = "새로운 제목"; // 에러! props는 읽기 전용
+  return <h1>{title}</h1>;
+}
+
+// ✅ 올바른 방법: 필요시 state로 복사
+function GoodComponent({ initialTitle }) {
+  const [title, setTitle] = useState(initialTitle);
+  
+  return (
+    <div>
+      <h1>{title}</h1>
+      <button onClick={() => setTitle("새로운 제목")}>
+        제목 변경
+      </button>
+    </div>
+  );
+}
+```
+
+### 자식 컴포넌트에서 Props 변경하기
+
+Props는 읽기 전용이지만, **부모 컴포넌트의 setter 함수를 props로 전달**하면 간접적으로 변경할 수 있습니다.
+
+```jsx
+// 부모 컴포넌트
+function ParentComponent() {
+  const [message, setMessage] = useState("안녕하세요!");
+  
+  return (
+    <div>
+      <p>부모 메시지: {message}</p>
+      <ChildComponent 
+        message={message}
+        onMessageChange={setMessage} // setter 함수 전달
+      />
+    </div>
+  );
+}
+
+// 자식 컴포넌트
+function ChildComponent({ message, onMessageChange }) {
+  const handleChange = (e) => {
+    onMessageChange(e.target.value); // 부모의 state 변경
+  };
+  
+  return (
+    <div>
+      <p>자식이 받은 메시지: {message}</p>
+      <input 
+        value={message}
+        onChange={handleChange}
+        placeholder="메시지를 입력하세요"
+      />
+    </div>
+  );
+}
+```
+
+### Props Validation (PropTypes)
+
+```jsx
+import PropTypes from 'prop-types';
+
+function UserProfile({ user, isAdmin, onSave }) {
+  return (
+    <div>
+      <h2>{user.name}</h2>
+      <p>{user.email}</p>
+      {isAdmin && <button onClick={onSave}>저장</button>}
+    </div>
+  );
+}
+
+UserProfile.propTypes = {
+  user: PropTypes.shape({
+    name: PropTypes.string.isRequired,
+    email: PropTypes.string.isRequired,
+  }).isRequired,
+  isAdmin: PropTypes.bool,
+  onSave: PropTypes.func
+};
+
+UserProfile.defaultProps = {
+  isAdmin: false,
+  onSave: () => {}
+};
+```
+
+### Default Props
+
+```jsx
+// 함수 컴포넌트에서 기본값 설정
+function Button({ text = "클릭", variant = "primary", onClick }) {
+  return (
+    <button 
+      className={`btn btn-${variant}`}
+      onClick={onClick}
+    >
+      {text}
+    </button>
+  );
+}
+
+// 구조분해할당으로 기본값 설정
+function Card({ title, children, className = "" }) {
+  return (
+    <div className={`card ${className}`}>
+      {title && <h3 className="card-title">{title}</h3>}
+      <div className="card-content">
+        {children}
+      </div>
+    </div>
+  );
+}
+```
+
+### 복잡한 State 관리
+
+#### 객체 State 업데이트
+
+```jsx
+function UserForm() {
+  const [user, setUser] = useState({
+    name: '',
+    email: '',
+    preferences: {
+      theme: 'light',
+      notifications: true
+    }
+  });
+  
+  // 중첩된 객체 업데이트
+  const updatePreferences = (key, value) => {
+    setUser(prevUser => ({
+      ...prevUser,
+      preferences: {
+        ...prevUser.preferences,
+        [key]: value
+      }
+    }));
+  };
+  
+  const handleInputChange = (field, value) => {
+    setUser(prevUser => ({
+      ...prevUser,
+      [field]: value
+    }));
+  };
+  
+  return (
+    <form>
+      <input
+        value={user.name}
+        onChange={(e) => handleInputChange('name', e.target.value)}
+        placeholder="이름"
+      />
+      <input
+        value={user.email}
+        onChange={(e) => handleInputChange('email', e.target.value)}
+        placeholder="이메일"
+      />
+      <select
+        value={user.preferences.theme}
+        onChange={(e) => updatePreferences('theme', e.target.value)}
+      >
+        <option value="light">라이트</option>
+        <option value="dark">다크</option>
+      </select>
+    </form>
+  );
+}
+```
+
+#### 배열 State 관리
+
+```jsx
+function TodoList() {
+  const [todos, setTodos] = useState([]);
+  const [inputValue, setInputValue] = useState('');
+  
+  // 추가
+  const addTodo = () => {
+    if (inputValue.trim()) {
+      setTodos(prevTodos => [...prevTodos, {
+        id: Date.now(),
+        text: inputValue,
+        completed: false
+      }]);
+      setInputValue('');
+    }
+  };
+  
+  // 삭제
+  const deleteTodo = (id) => {
+    setTodos(prevTodos => prevTodos.filter(todo => todo.id !== id));
+  };
+  
+  // 업데이트
+  const toggleTodo = (id) => {
+    setTodos(prevTodos => 
+      prevTodos.map(todo => 
+        todo.id === id 
+          ? { ...todo, completed: !todo.completed }
+          : todo
+      )
+    );
+  };
+  
+  return (
+    <div>
+      <input
+        value={inputValue}
+        onChange={(e) => setInputValue(e.target.value)}
+        placeholder="할 일을 입력하세요"
+      />
+      <button onClick={addTodo}>추가</button>
+      
+      <ul>
+        {todos.map(todo => (
+          <TodoItem
+            key={todo.id}
+            todo={todo}
+            onToggle={toggleTodo}
+            onDelete={deleteTodo}
+          />
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function TodoItem({ todo, onToggle, onDelete }) {
+  return (
+    <li>
+      <input
+        type="checkbox"
+        checked={todo.completed}
+        onChange={() => onToggle(todo.id)}
+      />
+      <span style={{
+        textDecoration: todo.completed ? 'line-through' : 'none'
+      }}>
+        {todo.text}
+      </span>
+      <button onClick={() => onDelete(todo.id)}>삭제</button>
+    </li>
+  );
+}
+```
+
+### State vs Props 비교표
+
+| 특성 | State | Props |
+|------|-------|-------|
+| **데이터 소유** | 컴포넌트 내부 | 부모 컴포넌트 |
+| **변경 가능성** | 변경 가능 (setter 사용) | 읽기 전용 |
+| **초기값 설정** | useState(초기값) | 부모에서 전달 |
+| **업데이트 방법** | setState 함수 | 부모 컴포넌트에서 변경 |
+| **리렌더링 발생** | state 변경 시 | props 변경 시 |
+| **사용 목적** | 컴포넌트 내부 상태 관리 | 컴포넌트 간 데이터 전달 |
+
+### 실제 사용 예시
+
+```jsx
+// 컴포넌트 설계 예시: 검색 가능한 사용자 목록
+function App() {
+  const [users, setUsers] = useState([]); // App의 state
+  const [searchTerm, setSearchTerm] = useState(''); // App의 state
+  
+  useEffect(() => {
+    // API에서 사용자 데이터 로드
+    fetchUsers().then(setUsers);
+  }, []);
+  
+  return (
+    <div>
+      <SearchBox 
+        searchTerm={searchTerm} // props로 전달
+        onSearchChange={setSearchTerm} // 함수도 props로 전달
+      />
+      <UserList 
+        users={users} // props로 전달
+        searchTerm={searchTerm} // props로 전달
+      />
+    </div>
+  );
+}
+
+function SearchBox({ searchTerm, onSearchChange }) {
+  return (
+    <input
+      type="text"
+      value={searchTerm} // props 사용
+      onChange={(e) => onSearchChange(e.target.value)} // props 함수 호출
+      placeholder="사용자 검색..."
+    />
+  );
+}
+
+function UserList({ users, searchTerm }) {
+  // props를 활용한 필터링
+  const filteredUsers = users.filter(user =>
+    user.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+  
+  return (
+    <div>
+      {filteredUsers.map(user => (
+        <UserCard key={user.id} user={user} /> // props로 전달
+      ))}
+    </div>
+  );
+}
+
+function UserCard({ user }) {
+  const [isExpanded, setIsExpanded] = useState(false); // 개별 state
+  
+  return (
+    <div className="user-card">
+      <h3>{user.name}</h3> {/* props 사용 */}
+      <button onClick={() => setIsExpanded(!isExpanded)}>
+        {isExpanded ? '접기' : '펼치기'}
+      </button>
+      {isExpanded && ( // state 사용
+        <div>
+          <p>이메일: {user.email}</p>
+          <p>전화번호: {user.phone}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+<Callout type="info" title="State vs Props 사용 가이드">
+
+**State를 사용해야 할 때:**
+- 컴포넌트 내부에서 값이 변경되어야 할 때
+- 사용자 상호작용에 의해 값이 바뀔 때
+- 시간에 따라 값이 변하는 경우
+
+**Props를 사용해야 할 때:**
+- 부모 컴포넌트의 데이터를 자식에게 전달할 때
+- 컴포넌트를 재사용 가능하게 만들 때
+- 설정값이나 콜백 함수를 전달할 때
+
+</Callout>
+
+State와 Props를 올바르게 이해하고 사용하면 더 예측 가능하고 유지보수하기 쉬운 React 컴포넌트를 만들 수 있습니다.
+
+<Callout type="info">
+**면접 팁**
+
+State와 Props에 대해 질문받을 때는 단순히 정의를 설명하는 것을 넘어서, 함수형 업데이트, 불변성 유지, 컴포넌트 간 데이터 흐름 등의 심화 개념까지 구체적인 코드 예시와 함께 설명할 수 있어야 합니다. 특히 실제 프로젝트에서 복잡한 상태 관리를 경험한 사례가 있다면 함께 언급하세요.
+
+</Callout>

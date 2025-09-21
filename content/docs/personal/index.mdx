@@ -1,0 +1,43 @@
+---
+title: 인트로
+description: Afaik의 문서페이지는 공부한 기록을 정리하는 목적으로 만들어졌습니다.
+---
+
+import {
+  GraduationCapIcon,
+  TerminalIcon,
+  BookOpenCheckIcon,
+} from "lucide-react";
+
+공부한 기록을 정리하는 목적으로 사용하고 있습니다.
+
+<Cards className="mt-5">
+
+<Card
+  title="학습"
+  href="/docs/personal/lecture"
+  icon={<GraduationCapIcon />}
+  description="책, 강의 관련 문서"
+/>
+
+<Card
+  title="알고리즘"
+  href="/docs/personal/algorithm"
+  icon={<TerminalIcon />}
+  description="알고리즘 관련 문서"
+/>
+
+<Card
+  title="TIL"
+  href="/docs/personal/2025/"
+  icon={<BookOpenCheckIcon />}
+  description="#새로운사실습득완료"
+/>
+
+</Cards>
+
+<Callout title="Powered by Fumadocs">
+
+우리의 문서는 오픈소스 프레임워크인 [Fumadocs](https://fumadocs.vercel.app)로 제작되었습니다.
+
+</Callout>

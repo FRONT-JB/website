@@ -1,0 +1,181 @@
+---
+title: "싱글톤(Singleton)"
+description: 프론트엔드 마스터클래스 w.인프런
+---
+
+import { Tab, Tabs } from "fumadocs-ui/components/tabs";
+
+## 🎯 핵심 개념 요약
+
+- **단일 인스턴스**: 클래스의 인스턴스를 오직 하나로 제한
+- **전역 접근**: 어디서든 동일한 인스턴스에 접근 가능
+- **지연 초기화**: 최초 호출 시에만 인스턴스 생성
+- **공유 자원 관리**: DB 연결, 로깅, 설정 등 중앙 집중 관리
+- **메모리 절약**: 중복 인스턴스 생성 방지로 리소스 효율성
+
+## 🏗️ 구현 방식
+
+### 핵심 메커니즘
+
+| 요소                  | 역할                    | 특징               |
+| --------------------- | ----------------------- | ------------------ |
+| **Private 접근 제어** | 외부 인스턴스 생성 차단 | IIFE나 클로저 활용 |
+| **Static 메서드**     | 전역 접근점 제공        | getInstance() 패턴 |
+| **지연 로딩**         | 필요 시점에 생성        | 성능 최적화        |
+
+### 버전 관리
+
+<Callout type="info" title="버전 추적의 중요성">
+  싱글턴은 전역에서 공유되므로 변경사항 추적을 위해 version 정보 포함 권장
+</Callout>
+
+## ⚡ 장단점 분석
+
+### 장점
+
+- **메모리 효율성**: 단일 인스턴스로 메모리 절약
+- **전역 상태 관리**: 애플리케이션 전반의 상태 통합 관리
+- **리소스 공유**: DB 커넥션 풀, 캐시 등 공유 자원 관리
+
+### 단점
+
+- **테스트 복잡성**: 전역 상태로 인한 단위 테스트 어려움
+- **강결합**: 다른 클래스와의 의존성 증가
+- **멀티스레드 이슈**: 동시성 제어 필요
+
+<Callout type="warn" title="사용 시 주의사항">
+  실제 필요성을 검토한 후 적용. 과도한 사용은 시스템 복잡도만 증가시킬 수 있음
+</Callout>
+
+## 📋 구현 패턴 예시
+
+<Tabs items={["싱글턴 예시 1", "싱글턴 예시 2"]}>
+  <Tab>
+
+```js
+const Singleton = (function () {
+  let instance; // 비공개 인스턴스 변수
+
+  function createInstance() {
+    // 실제 싱글톤 객체 생성
+    const object = {
+      randomNumber: Math.random(),
+      getRandom: function () {
+        return this.randomNumber;
+      },
+    };
+    return object;
+  }
+
+  return {
+    getInstance: function () {
+      if (!instance) {
+        instance = createInstance(); // 최초 1회만 생성
+      }
+      return instance;
+    },
+  };
+})();
+
+// 사용 예제
+const instance1 = Singleton.getInstance();
+const instance2 = Singleton.getInstance();
+
+console.log(instance1 === instance2); // true (동일 인스턴스)
+console.log(instance1.getRandom()); // 0.123456789 (같은 값)
+console.log(instance2.getRandom()); // 0.123456789 (같은 값)
+```
+
+  </Tab>
+
+  <Tab>
+
+```js
+const AppUtils = (function () {
+  let instance;
+
+  function init() {
+    // private 속성
+    const version = "1.0.0";
+
+    // private 메서드들
+    function _formatString(str) {
+      return str.charAt(0).toUpperCase() + str.slice(1);
+    }
+
+    // public API
+    return {
+      // 문자열 유틸리티
+      string: {
+        capitalize: function (str) {
+          return _formatString(str);
+        },
+        toCamelCase: function (str) {
+          return str.replace(/[-_](.)/g, (match, char) => char.toUpperCase());
+        },
+      },
+
+      // 날짜 유틸리티
+      date: {
+        formatDate: function (date) {
+          return new Intl.DateTimeFormat("ko-KR").format(date);
+        },
+        getTimestamp: function () {
+          return Date.now();
+        },
+      },
+
+      // 숫자 유틸리티
+      number: {
+        formatCurrency: function (amount) {
+          return new Intl.NumberFormat("ko-KR", {
+            style: "currency",
+            currency: "KRW",
+          }).format(amount);
+        },
+        random: function (min = 0, max = 100) {
+          return Math.floor(Math.random() * (max - min + 1)) + min;
+        },
+      },
+
+      // 시스템 정보 유틸리티
+      system: {
+        getVersion: function () {
+          return version;
+        },
+        getUserAgent: function () {
+          return navigator.userAgent;
+        },
+      },
+    };
+  }
+
+  return {
+    getInstance: function () {
+      if (!instance) {
+        instance = init(); // 최초 1회만 생성
+      }
+      return instance;
+    },
+  };
+})();
+
+// 사용 예제
+const utils = AppUtils.getInstance();
+const utils2 = AppUtils.getInstance();
+
+console.log(utils === utils2); // true (동일 인스턴스)
+console.log(utils.string.capitalize("hello world")); // "Hello world"
+console.log(utils.date.formatDate(new Date())); // "2024.12.31."
+console.log(utils.number.formatCurrency(10000)); // "₩10,000"
+console.log(utils.system.getVersion()); // "1.0.0"
+```
+
+  </Tab>
+</Tabs>
+
+<Callout title="강의 내용을 그대로 옮기지 않고, 제 생각대로 요약하고 정리했습니다.">
+
+자세한 내용은 [프론트엔드 마스터클래스](https://www.inflearn.com/course/%ED%94%84%EB%A1%A0%ED%8A%B8%EC%97%94%EB%93%9C-%EB%A7%88%EC%8A%A4%ED%84%B0%ED%81%B4%EB%9E%98%EC%8A%A4)를 참조해주세요.
+
+</Callout>

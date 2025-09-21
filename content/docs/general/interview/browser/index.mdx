@@ -1,0 +1,65 @@
+---
+title: Browser
+description: 브라우저 동작 원리와 웹 기술에 대한 면접 질문들입니다.
+---
+
+import { Card, Cards } from "fumadocs-ui/components/card";
+import Image from "next/image";
+
+<Cards>
+  <Card
+    title="브라우저 주소창에 URL 입력 과정"
+    description="URL 입력부터 페이지 렌더링까지의 전체 프로세스"
+    href="/docs/general/interview/browser/url-process"
+    icon={
+      <Image
+        src="https://shields.io/badge/Browser-FF6B35?logo=googlechrome&logoColor=fff&style=flat-square"
+        width={65}
+        height={20}
+        alt="browser"
+      />
+    }
+  />
+
+<Card
+  title="브라우저 렌더링 엔진"
+  description="렌더링 엔진의 동작 과정과 최적화"
+  href="/docs/general/interview/browser/rendering-engine"
+  icon={
+    <Image
+      src="https://shields.io/badge/Browser-FF6B35?logo=googlechrome&logoColor=fff&style=flat-square"
+      width={65}
+      height={20}
+      alt="browser"
+    />
+  }
+/>
+
+<Card
+  title="Critical Rendering Path"
+  description="CRP 최적화와 웹 성능 향상 전략"
+  href="/docs/general/interview/browser/critical-rendering-path"
+  icon={
+    <Image
+      src="https://shields.io/badge/Performance-FF4081?logo=speedtest&logoColor=fff&style=flat-square"
+      width={85}
+      height={20}
+      alt="performance"
+    />
+  }
+/>
+
+  <Card
+    title="브라우저 캐싱 전략"
+    description="HTTP 캐시와 성능 최적화 방법"
+    href="/docs/general/interview/browser/caching-strategy"
+    icon={
+      <Image
+        src="https://shields.io/badge/Performance-FF4081?logo=speedtest&logoColor=fff&style=flat-square"
+        width={85}
+        height={20}
+        alt="performance"
+      />
+    }
+  />
+</Cards>

@@ -1,0 +1,479 @@
+---
+title: "CSR과 SSR"
+description: "클라이언트 사이드 렌더링과 서버 사이드 렌더링의 차이점"
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+import { Mermaid } from "../../../../../components/mermaid";
+
+<Callout type="info">
+**중요도: ⭐⭐⭐⭐⭐**
+
+현대 웹 개발에서 렌더링 전략은 성능, SEO, 사용자 경험에 직접적인 영향을 미치는 핵심 개념입니다.
+
+</Callout>
+
+## CSR과 SSR의 차이점에 대해 설명해 주세요.
+
+**CSR(Client Side Rendering)**은 클라이언트에서 페이지를 렌더링하는 방식이고, **SSR(Server Side Rendering)**은 서버에서 페이지를 렌더링하는 방식입니다.
+
+<Callout type="info" title="렌더링 방식이란?">
+
+웹 페이지의 HTML, CSS, JavaScript를 처리하여 사용자에게 보여지는 최종 화면을 생성하는 과정이 어디서 일어나는지에 따라 구분됩니다.
+
+</Callout>
+
+### CSR (Client Side Rendering)
+
+#### 동작 과정
+
+<Mermaid
+  chart="
+sequenceDiagram
+participant User as 사용자
+participant Browser as 브라우저
+participant CDN as CDN/서버
+participant API as API 서버
+
+User->>Browser: 페이지 요청
+Browser->>CDN: HTML/CSS/JS 요청
+CDN-->>Browser: 빈 HTML + JS 번들
+Browser->>Browser: JavaScript 실행
+Browser->>API: 데이터 요청
+API-->>Browser: JSON 데이터
+Browser->>Browser: DOM 생성 및 렌더링
+Browser-->>User: 완전한 페이지 표시
+"
+/>
+
+#### CSR 특징
+
+**1. 초기 로드**
+
+```html
+<!-- CSR에서 서버가 보내는 초기 HTML -->
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>React App</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <!-- 빈 컨테이너 -->
+    <script src="/static/js/bundle.js"></script>
+  </body>
+</html>
+```
+
+**2. JavaScript로 동적 렌더링**
+
+```jsx
+// React 앱 예시
+function App() {
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // 클라이언트에서 데이터 로드
+    fetchUsers().then((data) => {
+      setUsers(data);
+      setLoading(false);
+    });
+  }, []);
+
+  if (loading) {
+    return <div>로딩 중...</div>;
+  }
+
+  return (
+    <div>
+      <h1>사용자 목록</h1>
+      {users.map((user) => (
+        <UserCard key={user.id} user={user} />
+      ))}
+    </div>
+  );
+}
+
+// 클라이언트에서 DOM에 렌더링
+ReactDOM.render(<App />, document.getElementById("root"));
+```
+
+#### CSR의 장점
+
+1. **빠른 페이지 전환**
+
+```jsx
+// SPA에서 페이지 이동 시 전체 페이지 새로고침 없음
+function Navigation() {
+  return (
+    <Router>
+      <nav>
+        <Link to="/">홈</Link> {/* 즉시 전환 */}
+        <Link to="/about">소개</Link> {/* 즉시 전환 */}
+        <Link to="/users">사용자</Link> {/* 즉시 전환 */}
+      </nav>
+
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/about" element={<About />} />
+        <Route path="/users" element={<Users />} />
+      </Routes>
+    </Router>
+  );
+}
+```
+
+2. **서버 부하 감소**
+
+```javascript
+// API 서버는 JSON만 응답
+app.get("/api/users", (req, res) => {
+  res.json(users); // HTML 생성 없이 데이터만 전송
+});
+```
+
+3. **풍부한 상호작용**
+
+```jsx
+function InteractiveComponent() {
+  const [count, setCount] = useState(0);
+  const [animation, setAnimation] = useState(false);
+
+  const handleClick = () => {
+    setAnimation(true);
+    setCount((prev) => prev + 1);
+    // 복잡한 애니메이션과 상태 관리
+    setTimeout(() => setAnimation(false), 500);
+  };
+
+  return (
+    <div className={animation ? "animate" : ""}>
+      <button onClick={handleClick}>클릭: {count}</button>
+    </div>
+  );
+}
+```
+
+#### CSR의 단점
+
+1. **초기 로딩 시간**
+
+```html
+<!-- 사용자가 보는 과정 -->
+1. 빈 화면 (HTML 로드) 2. 로딩 스피너 (JS 실행) 3. 데이터 로딩 4. 완전한 페이지
+표시
+```
+
+2. **SEO 문제**
+
+```html
+<!-- 검색엔진이 보는 초기 HTML -->
+<body>
+  <div id="root"></div>
+  <!-- 빈 내용 -->
+  <script src="bundle.js"></script>
+</body>
+<!-- JavaScript를 실행하지 않는 크롤러는 내용을 볼 수 없음 -->
+```
+
+### SSR (Server Side Rendering)
+
+#### 동작 과정
+
+<Mermaid
+  chart="
+sequenceDiagram
+participant User as 사용자
+participant Server as SSR 서버
+participant DB as 데이터베이스
+
+User->>Server: 페이지 요청
+Server->>DB: 데이터 요청
+DB-->>Server: 데이터 응답
+Server->>Server: HTML 렌더링
+Server-->>User: 완전한 HTML
+User->>Server: JS/CSS 요청 (선택적)
+Server-->>User: 리소스 전송
+"
+/>
+
+#### SSR 구현 예시 (Next.js)
+
+**1. 서버에서 데이터 패칭**
+
+```jsx
+// pages/users.js (Next.js)
+function Users({ users }) {
+  return (
+    <div>
+      <h1>사용자 목록</h1>
+      {users.map((user) => (
+        <UserCard key={user.id} user={user} />
+      ))}
+    </div>
+  );
+}
+
+// 서버에서 실행되는 함수
+export async function getServerSideProps() {
+  // 서버에서 데이터 미리 로드
+  const users = await fetchUsers();
+
+  return {
+    props: {
+      users, // 컴포넌트에 props로 전달
+    },
+  };
+}
+
+export default Users;
+```
+
+**2. 서버가 생성하는 HTML**
+
+```html
+<!-- 서버가 보내는 완전한 HTML -->
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>사용자 목록</title>
+  </head>
+  <body>
+    <div>
+      <h1>사용자 목록</h1>
+      <div class="user-card">
+        <h3>John Doe</h3>
+        <p>john@example.com</p>
+      </div>
+      <div class="user-card">
+        <h3>Jane Smith</h3>
+        <p>jane@example.com</p>
+      </div>
+      <!-- 실제 데이터로 채워진 HTML -->
+    </div>
+  </body>
+</html>
+```
+
+#### SSR의 장점
+
+1. **빠른 초기 로딩**
+
+```html
+<!-- 사용자가 보는 과정 -->
+1. 즉시 완전한 페이지 표시 2. JavaScript 로드 및 하이드레이션 (선택적)
+```
+
+2. **SEO 최적화**
+
+```html
+<!-- 검색엔진이 크롤링하는 내용 -->
+<html>
+  <head>
+    <title>사용자 목록 - 우리 사이트</title>
+    <meta name="description" content="등록된 사용자들의 목록입니다." />
+  </head>
+  <body>
+    <h1>사용자 목록</h1>
+    <div>John Doe - john@example.com</div>
+    <div>Jane Smith - jane@example.com</div>
+    <!-- 검색엔진이 모든 콘텐츠를 볼 수 있음 -->
+  </body>
+</html>
+```
+
+3. **소셜 미디어 최적화**
+
+```jsx
+// Next.js Head 컴포넌트
+import Head from "next/head";
+
+function UserProfile({ user }) {
+  return (
+    <>
+      <Head>
+        <title>{user.name} - 프로필</title>
+        <meta property="og:title" content={`${user.name}의 프로필`} />
+        <meta property="og:description" content={user.bio} />
+        <meta property="og:image" content={user.avatar} />
+      </Head>
+
+      <div>
+        <img src={user.avatar} alt={user.name} />
+        <h1>{user.name}</h1>
+        <p>{user.bio}</p>
+      </div>
+    </>
+  );
+}
+```
+
+#### SSR의 단점
+
+1. **서버 부하**
+
+```javascript
+// 매 요청마다 서버에서 렌더링
+app.get("/users/:id", async (req, res) => {
+  const user = await fetchUser(req.params.id);
+  const html = renderToString(<UserProfile user={user} />);
+  res.send(html); // 서버 리소스 사용
+});
+```
+
+2. **복잡한 상태 관리**
+
+```jsx
+// 서버와 클라이언트 간 상태 동기화
+function App({ initialData }) {
+  // 서버에서 받은 데이터와 클라이언트 상태 동기화 필요
+  const [data, setData] = useState(initialData);
+
+  useEffect(() => {
+    // 하이드레이션 후 클라이언트에서만 실행되는 로직
+  }, []);
+}
+```
+
+### 하이브리드 방식들
+
+#### Static Site Generation (SSG)
+
+```jsx
+// Next.js SSG 예시
+function BlogPost({ post }) {
+  return (
+    <article>
+      <h1>{post.title}</h1>
+      <div dangerouslySetInnerHTML={{ __html: post.content }} />
+    </article>
+  );
+}
+
+// 빌드 시점에 실행
+export async function getStaticProps({ params }) {
+  const post = await fetchPost(params.id);
+
+  return {
+    props: { post },
+    revalidate: 3600, // 1시간마다 재생성
+  };
+}
+
+export async function getStaticPaths() {
+  const posts = await fetchAllPosts();
+  const paths = posts.map((post) => ({ params: { id: post.id } }));
+
+  return {
+    paths,
+    fallback: "blocking", // 새 경로는 on-demand 생성
+  };
+}
+```
+
+#### Incremental Static Regeneration (ISR)
+
+```jsx
+// Next.js ISR 설정
+export async function getStaticProps() {
+  const data = await fetchData();
+
+  return {
+    props: { data },
+    revalidate: 60, // 60초마다 백그라운드에서 재생성
+  };
+}
+```
+
+### 선택 기준
+
+#### CSR을 선택해야 할 때
+
+```jsx
+// 대시보드, 어드민 패널 등
+function AdminDashboard() {
+  const [stats, setStats] = useState({});
+  const [realTimeData, setRealTimeData] = useState([]);
+
+  useEffect(() => {
+    // 실시간 데이터 업데이트
+    const ws = new WebSocket("ws://api.example.com/realtime");
+    ws.onmessage = (event) => {
+      setRealTimeData(JSON.parse(event.data));
+    };
+  }, []);
+
+  return (
+    <div>
+      <Charts data={realTimeData} />
+      <DataTable stats={stats} />
+    </div>
+  );
+}
+```
+
+#### SSR을 선택해야 할 때
+
+```jsx
+// 블로그, 뉴스 사이트, 제품 페이지 등
+function ProductPage({ product }) {
+  return (
+    <div>
+      <Head>
+        <title>{product.name} - 우리 쇼핑몰</title>
+        <meta name="description" content={product.description} />
+      </Head>
+
+      <h1>{product.name}</h1>
+      <img src={product.image} alt={product.name} />
+      <p>{product.description}</p>
+      <span>${product.price}</span>
+    </div>
+  );
+}
+```
+
+### 성능 비교
+
+| 지표                | CSR                   | SSR                  |
+| ------------------- | --------------------- | -------------------- |
+| **초기 로딩 시간**  | 느림 (JS 로드 + 실행) | 빠름 (완성된 HTML)   |
+| **페이지 전환**     | 빠름 (SPA)            | 느림 (전체 새로고침) |
+| **SEO**             | 제한적                | 우수                 |
+| **서버 부하**       | 낮음                  | 높음                 |
+| **캐싱**            | 클라이언트 캐싱       | 서버/CDN 캐싱        |
+| **사용자 상호작용** | 즉시 가능             | 하이드레이션 후 가능 |
+
+<Callout type="info" title="렌더링 방식 선택 가이드">
+
+**CSR이 적합한 경우:**
+
+- 대시보드, 어드민 패널
+- 실시간 데이터가 중요한 앱
+- 복잡한 사용자 상호작용이 많은 경우
+- SEO가 중요하지 않은 내부 툴
+
+**SSR이 적합한 경우:**
+
+- 블로그, 뉴스 사이트
+- 전자상거래 사이트
+- 랜딩 페이지
+- SEO가 중요한 마케팅 사이트
+
+**하이브리드 방식 (Next.js 등):**
+
+- 페이지별로 다른 렌더링 전략 적용
+- 정적 페이지는 SSG, 동적 페이지는 SSR
+- 최적의 성능과 SEO를 동시에 확보
+
+</Callout>
+
+현대적인 웹 개발에서는 Next.js, Nuxt.js 같은 프레임워크를 통해 상황에 맞는 최적의 렌더링 방식을 선택할 수 있습니다.
+
+<Callout type="info">
+**면접 팁**
+
+CSR과 SSR에 대해 질문받을 때는 단순히 정의만 설명하는 것이 아니라, 각각의 장단점과 적합한 사용 사례, 그리고 SSG, ISR 등의 하이브리드 방식까지 포괄적으로 설명할 수 있어야 합니다. 특히 실제 프로젝트에서 렌더링 전략을 선택한 경험이나 성능 최적화 경험이 있다면 구체적인 사례와 함께 언급하세요.
+
+</Callout>

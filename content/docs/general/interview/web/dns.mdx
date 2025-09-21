@@ -1,0 +1,192 @@
+---
+title: DNS (Domain Name System)
+description: DNS의 개념과 동작 원리에 대해 설명합니다.
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+<Callout type="info">
+**중요도: ⭐⭐⭐⭐⭐**
+
+웹 개발의 기본이 되는 핵심 인프라입니다.
+
+</Callout>
+
+## 개념
+
+도메인 이름 시스템 서버(Domain Name System Servers)는 URL들의 이름과 IP주소를 저장하고 있는 데이터베이스로, 웹사이트를 위한 주소록입니다.
+
+숫자로 된 IP주소 대신 사용자가 사용하기 편리하도록 주소를 매핑해 주는 역할을 합니다.
+
+## DNS 동작 과정
+
+### 1. DNS 조회 순서
+
+```
+1. 브라우저 캐시 확인
+2. 운영체제 캐시 확인
+3. 라우터 캐시 확인
+4. ISP DNS 서버 확인
+5. 권한 있는 DNS 서버 조회
+```
+
+### 2. 계층적 DNS 시스템
+
+```
+Root DNS Server (.)
+    ↓
+TLD DNS Server (.com, .org, .kr)
+    ↓
+Authoritative DNS Server (example.com)
+```
+
+## DNS 레코드 타입
+
+### A 레코드
+
+- 도메인을 IPv4 주소로 매핑
+
+```
+example.com.    IN    A    192.0.2.1
+```
+
+### AAAA 레코드
+
+- 도메인을 IPv6 주소로 매핑
+
+```
+example.com.    IN    AAAA    2001:db8::1
+```
+
+### CNAME 레코드
+
+- 도메인을 다른 도메인으로 매핑 (별칭)
+
+```
+www.example.com.    IN    CNAME    example.com.
+```
+
+### MX 레코드
+
+- 메일 서버 지정
+
+```
+example.com.    IN    MX    10 mail.example.com.
+```
+
+### NS 레코드
+
+- 네임서버 지정
+
+```
+example.com.    IN    NS    ns1.example.com.
+```
+
+## DNS 캐싱
+
+<Callout type="note">
+**TTL (Time To Live)**
+
+DNS 레코드가 캐시에 저장되는 시간을 초 단위로 지정합니다.
+
+</Callout>
+
+```javascript
+// JavaScript에서 DNS 조회 시간 측정
+async function measureDNSLookup(domain) {
+  const start = performance.now();
+
+  try {
+    await fetch(`https://${domain}`);
+    const end = performance.now();
+
+    console.log(`DNS lookup time: ${end - start}ms`);
+  } catch (error) {
+    console.error("DNS lookup failed:", error);
+  }
+}
+
+measureDNSLookup("example.com");
+```
+
+## DNS 보안
+
+### DNS Spoofing/Poisoning
+
+- 악의적으로 DNS 응답을 조작하는 공격
+- HTTPS와 인증서 검증으로 완화 가능
+
+### DNS over HTTPS (DoH)
+
+- DNS 쿼리를 HTTPS로 암호화하여 전송
+
+```javascript
+// DoH 예시 (Cloudflare)
+const dohQuery = async (domain) => {
+  const response = await fetch(
+    `https://1.1.1.1/dns-query?name=${domain}&type=A`,
+    {
+      headers: {
+        Accept: "application/dns-json",
+      },
+    },
+  );
+
+  return response.json();
+};
+```
+
+### DNS over TLS (DoT)
+
+- TLS로 암호화된 DNS 쿼리 (포트 853)
+
+## 성능 최적화
+
+### DNS Prefetch
+
+```html
+<!-- DNS 미리 조회 -->
+<link rel="dns-prefetch" href="//example.com" />
+<link rel="dns-prefetch" href="//cdn.example.com" />
+```
+
+### DNS Preconnect
+
+```html
+<!-- DNS 조회 + TCP 연결 + TLS 핸드셰이크 미리 수행 -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+```
+
+## 실무 예시
+
+### CDN과 DNS
+
+```javascript
+// 지역별 CDN 엔드포인트
+const cdnEndpoints = {
+  us: "us-cdn.example.com",
+  eu: "eu-cdn.example.com",
+  asia: "asia-cdn.example.com",
+};
+
+// 사용자 위치에 따른 DNS 조회
+const getOptimalCDN = async () => {
+  const userRegion = await getUserRegion();
+  return cdnEndpoints[userRegion] || cdnEndpoints["us"];
+};
+```
+
+### DNS 로드 밸런싱
+
+```
+example.com.    IN    A    192.0.2.1
+example.com.    IN    A    192.0.2.2
+example.com.    IN    A    192.0.2.3
+```
+
+<Callout type="info">
+**면접 팁**
+
+DNS는 웹 성능의 첫 번째 단계입니다. DNS 조회 시간이 전체 페이지 로드 시간에 미치는 영향과 최적화 방법을 함께 설명할 수 있어야 합니다.
+
+</Callout>

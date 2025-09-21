@@ -1,0 +1,37 @@
+---
+title: "9월 7일"
+description: "Turborepo 모노레포 최적화와 개발환경 구성"
+---
+
+## 오늘 배운 것 (TIL)
+
+### Turborepo 모노레포 최적화
+
+**TailwindCSS 설정 중앙화**:
+
+- PostCSS 설정을 `@triad/tailwindcss-config` 패키지로 이동
+- 공통 테마 설정 통합 관리
+- UI 패키지 자동 빌드 구성
+
+**ShadCN UI 전역 커맨드**:
+
+- 어느 위치에서든 `pnpm ui add [component]`로 컴포넌트 추가 가능
+- 패키지 간 컴포넌트 재사용 최적화
+
+### Pretendard 폰트 시스템
+
+```tsx
+const pretendard = localFont({
+  src: "../public/fonts/PretendardVariable.woff2",
+  variable: "--font-pretendard",
+});
+
+// TailwindCSS 설정
+fontFamily: {
+  sans: ["var(--font-pretendard)", "Apple SD Gothic Neo", ...],
+}
+```
+
+---
+
+**배운 점**: 모노레포에서 설정을 중앙화하면 일관성과 유지보수성이 크게 향상됨
