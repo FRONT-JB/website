@@ -1,0 +1,71 @@
+---
+title: "9월 24일"
+description: "2025년 9월 24일에 기록한 내용"
+---
+
+## 오늘 배운 것 (TIL)
+
+### react-dropzone 공식 문서 정독 기록
+
+react-dropzone의 `useDropzone` 훅이 제공하는 프로퍼티와 옵션들을 공식 문서를 중심으로 정리했다. 파일 드래그 앤 드롭 영역을 구축할 때 기본적으로 `<input type="file">`를 감싼 컨테이너에 `getRootProps()`를 전개하고, 숨겨진 파일 입력에는 `getInputProps()`를 바인딩하는 패턴을 사용한다는 점을 다시 확인했다.
+
+#### 핵심 API 흐름
+
+- `useDropzone({ onDrop })`은 `acceptedFiles`와 `fileRejections` 두 리스트를 넘겨준다. 리젝션은 각 파일마다 `errors` 배열을 가지고 있어서 사이즈, 타입 등 어떤 검증이 실패했는지 바로 확인할 수 있다.
+- 반환 객체의 `isDragActive`, `isDragAccept`, `isDragReject` 상태값을 활용하면 드래그 중 피드백 UI를 쉽게 분기할 수 있다.
+- `open()` 메서드를 이용하면 사용자 정의 버튼으로 파일 다이얼로그를 열 수 있고, `noClick`/`noKeyboard` 옵션과 조합해 의도치 않은 포커스 이동을 막을 수 있다.
+
+#### 옵션 정리 메모
+
+- `accept`는 MIME 타입과 확장자 배열을 매핑하는 객체 형태다. 예: `accept: { "image/*": [".png", ".jpg"], "application/pdf": [] }`.
+- 파일 개수/크기 제한은 `maxFiles`, `maxSize`, `minSize`로 제어한다. 초과 시 자동으로 `fileRejections`에 들어간다.
+- 커스텀 유효성 검사는 `validator(file)`를 지정해 `FileError` 배열을 반환하는 방식으로 확장한다. 여러 검사를 수행한 뒤 필요한 메시지를 직접 넣을 수 있어 디테일한 UX를 설계하기 좋다.
+
+#### 접근성과 UX에서 얻은 팁
+
+- 기본적으로 `<input>`은 스크린 리더가 읽을 수 있으므로, 커스텀 버튼만 노출할 때도 `aria-labelledby`를 활용해 맥락을 전달해야 한다고 권장한다.
+- `disabled`를 true로 주면 루트 엘리먼트에 `aria-disabled`가 포함되므로 스타일과 함께 상태를 명시해주면 좋다.
+- 드래그 오버 스타일은 키보드 사용자도 느낄 수 있도록 포커스 스타일과 일관되게 설계하라고 문서에서 강조한다.
+
+#### 참고용 샘플 코드
+
+```tsx
+import { useCallback } from "react";
+import { useDropzone } from "react-dropzone";
+
+export function AvatarDropzone({ onUpload }: { onUpload: (file: File) => void }) {
+  const handleDrop = useCallback((acceptedFiles: File[]) => {
+    const [file] = acceptedFiles;
+    if (file) {
+      onUpload(file);
+    }
+  }, [onUpload]);
+
+  const { getRootProps, getInputProps, isDragActive, open, fileRejections } = useDropzone({
+    onDrop: handleDrop,
+    accept: { "image/*": [".png", ".jpg", ".jpeg", ".webp"] },
+    maxFiles: 1,
+    maxSize: 1024 * 1024 * 5,
+    noClick: true,
+    onDropRejected: (rejections) => {
+      console.warn("파일 업로드 거절", rejections);
+    },
+  });
+
+  return (
+    <div {...getRootProps({ className: isDragActive ? "border-blue-500" : "border-gray-300" })}>
+      <input {...getInputProps()} />
+      <button type="button" onClick={open}>
+        파일 선택하기
+      </button>
+      {fileRejections.length > 0 && <p className="text-red-500">조건에 맞는 파일만 업로드할 수 있어요.</p>}
+    </div>
+  );
+}
+```
+
+#### 실무 적용 메모
+
+- 미리보기 URL을 만들 때는 `URL.createObjectURL`로 생성하고 컴포넌트 언마운트 시 `revokeObjectURL`을 호출해 메모리 누수를 방지하는 패턴을 적용해야 한다.
+- 여러 파일 업로드 UI에서는 `useDropzone` 훅을 한 번만 초기화하고, 리스트 렌더링과 삭제는 상위 상태로 관리하는 것이 성능과 관리 측면에서 유리했다.
+- Suspense 기반 이미지 편집기와 연동할 때는 업로드 성공 후 서버에서 반환된 메타데이터를 조합해 `onDrop`에서 Promise 처리를 할 수 있도록 `onDrop` 함수 내에서 async/await 패턴을 사용하는 것이 안정적이었다.
