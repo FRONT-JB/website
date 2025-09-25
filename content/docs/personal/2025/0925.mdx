@@ -1,0 +1,82 @@
+---
+title: "9월 25일"
+description: "2025년 9월 25일에 기록한 내용"
+---
+
+## 오늘 배운 것 (TIL)
+
+### Next.js와 Supabase를 활용한 사용자 프로필 페이지 구현
+
+#### 핵심 깨달음
+
+- **Next-auth useSession 훅**: 클라이언트 컴포넌트에서 "use client" 지시어와 함께 사용 필수
+- **세션 업데이트 패턴**: `update()` 함수를 통한 세션 동기화로 프로필 변경 즉시 반영
+- **Supabase RLS 정책**: Row Level Security를 통한 사용자별 데이터 접근 제어
+
+#### 정확한 구현 패턴
+
+```js
+"use client"
+import { useSession } from "next-auth/react"
+
+export default function ProfilePage() {
+  const { data: session, update } = useSession()
+  const [loading, setLoading] = useState(false)
+  const [message, setMessage] = useState('')
+
+  const updateProfile = async (profileData) => {
+    try {
+      setLoading(true)
+
+      // Supabase 프로필 업데이트 (RLS 정책에 의해 본인만 수정 가능)
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          username: profileData.username,
+          website: profileData.website,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', session?.user?.id)
+
+      if (error) throw error
+
+      // 세션 새로고침으로 변경사항 반영
+      await update()
+      setMessage('프로필이 업데이트되었습니다')
+    } catch (error) {
+      console.error('Profile update error:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // 인증되지 않은 사용자 처리
+  if (!session) return <div>로그인이 필요합니다</div>
+
+  return (
+    // 프로필 폼 UI
+  )
+}
+```
+
+#### 주요 학습 포인트
+
+1. **Next-auth 클라이언트 사용법**: `"use client"` 지시어 필수, SessionProvider로 감싸기
+2. **Supabase RLS 활용**: 데이터베이스 정책으로 보안 강화
+3. **세션 동기화**: `update()` 함수로 프로필 변경 후 세션 새로고침
+4. **에러 처리**: Supabase 에러 객체 확인 및 사용자 피드백
+
+#### Supabase RLS 정책 예시
+
+```sql
+-- 사용자는 본인 프로필만 업데이트 가능
+create policy "Users can update own profile."
+  on profiles for update
+  using ( (select auth.uid()) = id );
+```
+
+#### 보안 모범 사례
+
+- RLS 정책으로 데이터베이스 레벨에서 접근 제어
+- 클라이언트와 서버 양쪽에서 인증 상태 검증
+- 프로필 업데이트 시 사용자 ID 매칭 확인
