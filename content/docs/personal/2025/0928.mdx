@@ -1,0 +1,265 @@
+---
+title: "9월 28일"
+description: "2025년 9월 28일에 기록한 내용"
+---
+
+## 오늘 배운 것 (TIL)
+
+### Ky: Next.js에서 사용하는 현대적 HTTP 클라이언트
+
+#### 핵심 깨달음
+
+- **Fetch API 기반**: 표준 Fetch를 확장한 가볍고 우아한 HTTP 클라이언트
+- **자동 에러 처리**: 2xx가 아닌 응답에 대해 자동으로 HTTPError 발생
+- **간결한 API**: 기존 fetch보다 훨씬 간단한 문법으로 HTTP 요청 처리
+
+#### 정확한 구현 패턴
+
+```js
+import ky from "ky";
+
+// 기본 사용법 - GET 요청
+const user = await ky("/api/user").json();
+
+// POST 요청으로 JSON 전송
+const response = await ky
+  .post("https://api.example.com/users", {
+    json: { name: "John", age: 30 },
+  })
+  .json();
+
+// API 인스턴스 생성
+const api = ky.create({
+  prefixUrl: "https://api.example.com",
+  headers: {
+    Authorization: "Bearer token",
+    "Content-Type": "application/json",
+  },
+  timeout: 10000,
+});
+
+// 재시도 설정
+const data = await ky("https://api.example.com/data", {
+  retry: {
+    limit: 3,
+    methods: ["get"],
+    statusCodes: [408, 413, 429, 500, 502, 503, 504],
+    backoffLimit: 3000,
+  },
+}).json();
+```
+
+#### 주요 학습 포인트
+
+1. **설치 및 임포트**: `npm install ky`로 설치, ES6 모듈로 임포트
+2. **JSON 처리**: `.json()` 메서드로 간편한 JSON 파싱
+3. **에러 처리**: HTTPError 자동 발생으로 명시적 상태 코드 확인 불필요
+4. **TypeScript 지원**: 제네릭을 통한 완전한 타입 안전성
+
+#### HTTP 클라이언트 비교: Ky vs Fetch vs Axios
+
+##### Fetch (네이티브)
+
+```js
+// 기본 POST 요청
+const response = await fetch("https://api.example.com/users", {
+  method: "POST",
+  body: JSON.stringify({ name: "John" }),
+  headers: { "Content-Type": "application/json" },
+});
+
+if (!response.ok) {
+  throw new Error(`HTTP Error: ${response.status}`);
+}
+
+const data = await response.json();
+```
+
+##### Axios
+
+```js
+// 기본 POST 요청
+const response = await axios.post("https://api.example.com/users", {
+  name: "John",
+});
+
+const data = response.data;
+```
+
+##### Ky
+
+```js
+// 기본 POST 요청
+const data = await ky
+  .post("https://api.example.com/users", {
+    json: { name: "John" },
+  })
+  .json();
+```
+
+#### 상세 비교 분석
+
+| 특징          | Fetch           | Axios                       | Ky              |
+| ------------- | --------------- | --------------------------- | --------------- |
+| 번들 크기     | 0KB (네이티브)  | ~15KB                       | ~11KB           |
+| JSON 처리     | 수동            | 자동                        | 자동            |
+| 에러 처리     | 수동 체크 필요  | 자동                        | 자동            |
+| 재시도        | 별도 구현       | 플러그인                    | 내장            |
+| 요청 취소     | AbortController | CancelToken/AbortController | AbortController |
+| TypeScript    | 부분적          | 완전 지원                   | 완전 지원       |
+| 브라우저 지원 | 모던 브라우저   | IE11+                       | 모던 브라우저   |
+
+##### Ky의 장점
+
+1. **간결한 문법**: 가장 적은 코드로 HTTP 요청 처리
+2. **표준 기반**: Fetch API 기반으로 웹 표준 준수
+3. **가벼운 크기**: Axios보다 작은 번들 크기
+4. **모던 API**: Promise 기반 async/await 완벽 지원
+5. **내장 재시도**: 설정 가능한 재시도 메커니즘
+6. **TypeScript 우선**: 완전한 타입 안전성
+
+##### Ky의 단점
+
+1. **브라우저 제한**: IE 지원 불가 (Fetch API 의존)
+2. **생태계**: Axios 대비 작은 커뮤니티
+3. **기능 제한**: 일부 고급 기능은 Axios가 더 풍부
+4. **러닝 커브**: 기존 Axios 사용자에게는 새로운 패러다임
+
+##### 각 라이브러리 사용 권장 시나리오
+
+**Fetch 사용 권장**
+
+- 번들 크기가 극도로 중요한 경우
+- 간단한 HTTP 요청만 필요한 경우
+- 외부 의존성을 최소화하려는 경우
+
+**Axios 사용 권장**
+
+- IE 지원이 필요한 경우
+- 복잡한 요청/응답 변환이 필요한 경우
+- 기존 Axios 기반 코드베이스
+
+**Ky 사용 권장**
+
+- 모던 브라우저 타겟팅
+- TypeScript 프로젝트
+- 간결하고 우아한 API 선호
+- Next.js 같은 모던 프레임워크
+
+#### Next.js에서 활용 예시
+
+```js
+// 서버 컴포넌트에서 외부 API 호출
+import ky from 'ky';
+
+export default async function UsersPage() {
+  const users = await ky('https://jsonplaceholder.typicode.com/users').json();
+
+  return (
+    <div>
+      {users.map(user => (
+        <div key={user.id}>{user.name}</div>
+      ))}
+    </div>
+  );
+}
+
+// 클라이언트 컴포넌트에서 사용
+'use client';
+import { useState, useEffect } from 'react';
+import ky from 'ky';
+
+export default function UsersList() {
+  const [users, setUsers] = useState([]);
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const data = await ky('/api/users').json();
+        setUsers(data);
+      } catch (error) {
+        console.error('Failed to fetch users:', error);
+      }
+    };
+    fetchUsers();
+  }, []);
+
+  return (
+    <ul>
+      {users.map(user => (
+        <li key={user.id}>{user.name}</li>
+      ))}
+    </ul>
+  );
+}
+```
+
+#### 고급 기능 활용
+
+```js
+// 요청/응답 훅 설정
+const api = ky.extend({
+  hooks: {
+    beforeRequest: [
+      (request) => {
+        request.headers.set("X-Requested-With", "ky");
+      },
+    ],
+    afterResponse: [
+      (request, options, response) => {
+        console.log(`${request.method} ${request.url}: ${response.status}`);
+      },
+    ],
+  },
+});
+
+// 요청 취소
+const controller = new AbortController();
+setTimeout(() => controller.abort(), 5000);
+
+try {
+  const response = await ky("https://api.example.com/data", {
+    signal: controller.signal,
+  }).json();
+} catch (error) {
+  if (error.name === "AbortError") {
+    console.log("Request was cancelled");
+  }
+}
+```
+
+#### 마이그레이션 가이드
+
+**Axios에서 Ky로 마이그레이션**
+
+```js
+// Axios
+axios.get("/api/users").then((response) => response.data);
+
+// Ky
+ky("/api/users").json();
+
+// Axios 인터셉터
+axios.interceptors.request.use((config) => {
+  config.headers.Authorization = `Bearer ${token}`;
+  return config;
+});
+
+// Ky 훅
+const api = ky.extend({
+  hooks: {
+    beforeRequest: [
+      (request) => {
+        request.headers.set("Authorization", `Bearer ${token}`);
+      },
+    ],
+  },
+});
+```
+
+#### 성능 및 번들 최적화
+
+- **Tree Shaking**: ES6 모듈로 사용하지 않는 기능 제거
+- **번들 크기**: Axios 대비 약 30% 작은 크기
+- **런타임 성능**: Fetch API 기반으로 네이티브 성능
+- **메모리 효율성**: 가벼운 래퍼로 메모리 오버헤드 최소화
