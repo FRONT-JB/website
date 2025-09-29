@@ -1,0 +1,141 @@
+---
+title: "9월 30일"
+description: "React Fiber 아키텍처 심화 학습"
+---
+
+## 오늘 배운 것 (TIL)
+
+React Fiber 아키텍처 심화 학습
+
+## 핵심 요약 (TL;DR)
+
+React 16에서 도입된 Fiber 아키텍처의 내부 동작 원리를 학습하고, 타임 슬라이싱과 우선순위 기반 업데이트 메커니즘을 통해 사용자 경험을 개선하는 방법 학습.
+
+## React Fiber 아키텍처
+
+### Fiber 도입 배경
+
+**React 15의 한계**:
+
+- **동기적 렌더링**: 재귀적 컴포넌트 트리 순회로 인한 브라우저 블로킹
+- **중단 불가능**: 렌더링 작업이 시작되면 완료까지 중단 불가
+- **프레임 드롭**: 복잡한 UI에서 60fps 유지 실패
+
+**Fiber의 해결책**:
+
+- **타임 슬라이싱**: 작업을 5ms 단위로 분할하여 브라우저 응답성 유지
+- **우선순위 기반 스케줄링**: 중요한 작업(사용자 입력) 우선 처리
+- **작업 중단/재시작**: 높은 우선순위 작업을 위한 현재 작업 중단 가능
+
+### 핵심 개념
+
+#### 1. 우선순위 시스템
+
+| 우선순위         | 처리 시간  | 예시                |
+| ---------------- | ---------- | ------------------- |
+| **Immediate**    | 즉시       | 사용자 입력, 포커스 |
+| **UserBlocking** | 100ms 이내 | 클릭, 키보드 입력   |
+| **Normal**       | 5초 이내   | 네트워크 응답       |
+| **Low**          | 10초 이내  | 분석 데이터         |
+| **Idle**         | 유휴 시간  | 백그라운드 작업     |
+
+#### 2. 렌더링 단계 분리
+
+**Render Phase (재조정 단계)**:
+
+- **특징**: 순수 함수적, 중단 가능, 비동기적
+- **역할**: Virtual DOM 비교(Diffing), 변경사항 계산
+- **호출 메서드**: constructor, render, shouldComponentUpdate
+
+**Commit Phase (커밋 단계)**:
+
+- **특징**: 동기적 실행, 중단 불가능, 원자적 연산
+- **역할**: 실제 DOM 업데이트, Side Effect 실행
+- **3단계**: Before Mutation → Mutation → Layout
+
+#### 3. Fiber Node 구조
+
+```javascript
+const fiberNode = {
+  // 트리 구조
+  child: null, // 첫 번째 자식
+  sibling: null, // 다음 형제
+  return: null, // 부모 노드
+
+  // 상태 관리
+  memoizedState: null, // 이전 상태
+  pendingProps: null, // 새로운 props
+
+  // 스케줄링
+  expirationTime: 0, // 만료 시간
+  childExpirationTime: 0, // 자식 만료 시간
+};
+```
+
+### 실무 적용
+
+#### React 18 Concurrent Features 활용
+
+```javascript
+// startTransition으로 우선순위 조정
+function SearchApp() {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState([]);
+
+  const handleSearch = (value) => {
+    setQuery(value); // 높은 우선순위: 즉시 업데이트
+
+    startTransition(() => {
+      // 낮은 우선순위: 검색 결과 업데이트
+      setResults(expensiveSearch(value));
+    });
+  };
+
+  return (
+    <div>
+      <SearchInput value={query} onChange={handleSearch} />
+      <SearchResults results={results} />
+    </div>
+  );
+}
+
+// useDeferredValue로 비중요 업데이트 지연
+function SearchResults({ query }) {
+  const deferredQuery = useDeferredValue(query);
+  const results = useMemo(() => searchDatabase(deferredQuery), [deferredQuery]);
+
+  return <ResultsList results={results} />;
+}
+```
+
+#### 성능 최적화 원칙
+
+- **Render Phase**: 순수 함수 유지, 사이드 이펙트 금지
+- **Effect 분리**: useEffect로 사이드 이펙트 적절히 분리
+- **메모이제이션**: useMemo, useCallback 적극 활용
+
+### 성능 개선 효과
+
+| 메트릭             | React 15  | React 16+ (Fiber) |
+| ------------------ | --------- | ----------------- |
+| **First Paint**    | 300ms     | 16ms              |
+| **Input Response** | 차단됨    | 즉시 반응         |
+| **Frame Drops**    | 많음      | 최소화            |
+| **메모리 사용량**  | 스택 증가 | 안정적            |
+
+## 학습 포인트
+
+### 주요 깨달음
+
+1. **내부 구현의 중요성**: Fiber는 개발자가 직접 조작하지 않지만, 동작 원리를 이해하면 더 효율적인 코드 작성 가능
+
+2. **성능 최적화의 자동화**: React가 자동으로 많은 최적화를 수행하지만, 개발자가 원리를 알고 협력해야 최대 효과
+
+3. **동시성의 미래**: Concurrent Features는 단순한 기능이 아닌, 사용자 경험 혁신의 기반
+
+---
+
+## 참고 자료
+
+- [React Fiber 아키텍처 문서](/content/docs/personal/lecture/master-class/react-next/fiber.mdx)
+- 프론트엔드 마스터클래스 강의
