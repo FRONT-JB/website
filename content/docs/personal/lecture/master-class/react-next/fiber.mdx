@@ -1,0 +1,516 @@
+---
+title: "React Fiber 아키텍처"
+---
+
+import { Mermaid } from "../../../../../../components/mermaid";
+
+## 🎯 핵심 개념 요약
+
+- **Fiber**: React 16에서 도입된 새로운 재조정 엔진
+- **타임 슬라이싱**: 렌더링 작업을 조각내어 브라우저 응답성 향상
+- **우선순위 기반 업데이트**: 중요한 작업 먼저 처리
+- **동시성 모드**: Suspense, Concurrent Mode의 기반 기술
+- **단계 분리**: Render Phase(중단 가능) vs Commit Phase(원자적 실행)
+
+## 🔄 Fiber 도입 배경
+
+### React 15의 한계
+
+- **동기적 렌더링**: 재귀적으로 컴포넌트 트리를 순회하며 한 번에 모든 DOM 업데이트
+- **중단 불가능**: 렌더링 작업이 시작되면 완료될 때까지 멈출 수 없음
+- **브라우저 블로킹**: 복잡한 UI나 대량 데이터 처리 시 프레임 드롭과 응답성 저하
+
+```js
+// React 15의 문제점 시나리오
+function BigList({ items }) {
+  return (
+    <ul>
+      {items.map((item) => (
+        <li key={item.id}>
+          <ComplexComponent data={item} />
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+// 10,000개 아이템 렌더링 시
+// 전체 트리를 한 번에 처리 → UI 멈춤 발생
+```
+
+### Fiber가 해결하고자 한 문제
+
+- **메인 스레드 점유**: 긴 렌더링으로 인한 사용자 입력 차단
+- **16ms 예산 초과**: 60fps 유지를 위한 프레임 예산 초과
+- **응답성 저하**: 애니메이션 끊김과 인터랙션 지연
+
+## ⚡ Fiber의 핵심 기능
+
+### 1. 타임 슬라이싱 (Time Slicing)
+
+**개념**
+
+- 렌더링 작업을 작은 단위로 분할하여 스케줄링
+- 브라우저의 유휴 시간을 활용한 점진적 렌더링
+
+**동작 방식**
+
+<Mermaid
+  chart="
+graph TD
+  A[대량 업데이트 발생] --> B[작업을 작은 단위로 분할]
+  B --> C[5ms 단위로 작업 실행]
+  C --> D{프레임 예산 초과?}
+  D -->|Yes| E[제어권을 브라우저에 반환]
+  D -->|No| F[다음 작업 단위 실행]
+  E --> G[사용자 입력 처리]
+  G --> H[유휴 시간에 작업 재개]
+  H --> F
+  F --> I{모든 작업 완료?}
+  I -->|No| C
+  I -->|Yes| J[DOM에 변경사항 커밋]
+"
+/>
+
+```js
+// 타임 슬라이싱 효과 비교
+// Before Fiber: 10,000개 → 전체 한 번에 처리 → UI 멈춤
+// After Fiber: 100개씩 100번 → 중간에 입력 처리 → 응답성 유지
+
+function processLargeList(items) {
+  // Fiber 없음: 블로킹
+  items.forEach((item) => processItem(item));
+
+  // Fiber 적용: 타임 슬라이싱
+  // React가 자동으로 작업을 분할하여 처리
+}
+```
+
+### 2. 우선순위 기반 업데이트
+
+**우선순위 레벨**
+
+| 우선순위         | 용도       | 예시                |
+| ---------------- | ---------- | ------------------- |
+| **Immediate**    | 즉시 처리  | 사용자 입력, 포커스 |
+| **UserBlocking** | 100ms 이내 | 클릭, 키보드 입력   |
+| **Normal**       | 5초 이내   | 네트워크 응답       |
+| **Low**          | 10초 이내  | 분석 데이터         |
+| **Idle**         | 유휴 시간  | 백그라운드 작업     |
+
+```js
+// 우선순위 기반 업데이트 예시
+function SearchComponent() {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState([]);
+
+  const handleInputChange = (e) => {
+    // 높은 우선순위: 즉시 처리
+    setQuery(e.target.value);
+
+    // 낮은 우선순위: 검색 결과 업데이트
+    startTransition(() => {
+      setResults(searchResults(e.target.value));
+    });
+  };
+
+  return (
+    <div>
+      <input value={query} onChange={handleInputChange} />
+      <SearchResults results={results} />
+    </div>
+  );
+}
+```
+
+### 3. 작업 중단 및 재시작
+
+**재시도 메커니즘**
+
+- 더 높은 우선순위 작업 발생 시 현재 작업 중단
+- 중요한 작업 완료 후 이전 작업 재개
+
+```js
+// 작업 중단 시나리오
+// 1. 대량 리스트 렌더링 중 (낮은 우선순위)
+// 2. 사용자 클릭 발생 (높은 우선순위)
+// 3. 리스트 렌더링 중단 → 클릭 처리
+// 4. 클릭 처리 완료 → 리스트 렌더링 재개
+```
+
+## 🏗️ Fiber 아키텍처 구조
+
+### Fiber Node 구조
+
+**기본 구조**
+
+```js
+// Fiber Node의 핵심 구조
+const fiberNode = {
+  // 컴포넌트 정보
+  type: "div", // 컴포넌트 타입
+  key: "unique-key", // React key
+  props: { className: "container" },
+
+  // 트리 구조
+  child: null, // 첫 번째 자식
+  sibling: null, // 다음 형제
+  return: null, // 부모 노드
+
+  // 상태 관리
+  memoizedState: null, // 이전 상태
+  pendingProps: null, // 새로운 props
+  memoizedProps: null, // 이전 props
+
+  // 작업 관리
+  effectTag: null, // 수행할 작업 타입
+  nextEffect: null, // 다음 effect
+
+  // 스케줄링
+  expirationTime: 0, // 만료 시간
+  childExpirationTime: 0, // 자식 만료 시간
+};
+```
+
+### 트리 순회 방식
+
+**기존 vs Fiber 순회**
+
+<Mermaid
+  chart="
+graph TD
+  subgraph Before[React 15: 재귀적 순회]
+    A1[App] --> B1[Header]
+    A1 --> C1[Main]
+    A1 --> D1[Footer]
+    C1 --> E1[List]
+    E1 --> F1[Item1]
+    E1 --> G1[Item2]
+  end
+
+subgraph After[React 16: Fiber 링크드 리스트]
+A2[App] --> B2[Header]
+B2 --> C2[Main]
+C2 --> D2[Footer]
+C2 --> E2[List]
+E2 --> F2[Item1]
+F2 --> G2[Item2]
+end
+"
+/>
+
+**Fiber의 이점**
+
+- **중단 가능**: 링크드 리스트로 인한 작업 일시정지
+- **우선순위 처리**: 높은 우선순위 작업으로 점프 가능
+- **메모리 효율**: 스택 오버플로우 방지
+
+## 📋 렌더링 단계 분리
+
+### Render Phase (재조정 단계)
+
+**특징**
+
+- **순수 함수적**: 사이드 이펙트 없음
+- **중단 가능**: 우선순위에 따라 작업 중단/재시작
+- **비동기적**: 백그라운드에서 실행
+
+**수행 작업**
+
+- Virtual DOM 비교 (Diffing)
+- 컴포넌트 라이프사이클 호출
+- Effect 리스트 생성
+
+```js
+// Render Phase에서 호출되는 메서드들
+class MyComponent extends Component {
+  constructor(props) {
+    // Render Phase에서 호출 가능
+  }
+
+  static getDerivedStateFromProps() {
+    // Render Phase에서 호출 가능
+  }
+
+  shouldComponentUpdate() {
+    // Render Phase에서 호출 가능
+  }
+
+  render() {
+    // Render Phase에서 호출
+    // 순수해야 함 - 사이드 이펙트 금지
+    return <div>Content</div>;
+  }
+
+  getSnapshotBeforeUpdate() {
+    // Render Phase에서 호출 가능
+  }
+}
+```
+
+### Commit Phase (커밋 단계)
+
+**특징**
+
+- **동기적 실행**: 한 번에 모든 변경사항 적용
+- **중단 불가능**: 원자적 연산으로 실행
+- **사이드 이펙트 허용**: DOM 조작, API 호출 등
+
+**3단계 처리**
+
+<Mermaid
+  chart="
+graph LR
+  A[Before Mutation] --> B[Mutation] --> C[Layout]
+
+subgraph BeforeDetail[Before Mutation]
+A1[getSnapshotBeforeUpdate]
+A2[async useEffect cleanup]
+end
+
+subgraph MutationDetail[Mutation]
+B1[DOM 노드 삽입/삭제/업데이트]
+B2[ref 업데이트]
+end
+
+subgraph LayoutDetail[Layout]
+C1[componentDidMount/Update]
+C2[useLayoutEffect]
+C3[새로운 ref 설정]
+end
+"
+/>
+
+```js
+// Commit Phase에서 호출되는 메서드들
+class MyComponent extends Component {
+  componentDidMount() {
+    // Commit Phase - Layout 단계
+    // DOM 조작, API 호출 가능
+    this.setState({ mounted: true });
+  }
+
+  componentDidUpdate() {
+    // Commit Phase - Layout 단계
+    // 사이드 이펙트 수행 가능
+  }
+
+  componentWillUnmount() {
+    // Commit Phase - Before Mutation 단계
+    // 정리 작업 수행
+  }
+}
+
+// 함수형 컴포넌트에서
+function MyComponent() {
+  useEffect(() => {
+    // Commit Phase - 비동기적으로 실행
+    fetchData();
+
+    return () => {
+      // cleanup - Before Mutation 단계
+      clearTimeout(timer);
+    };
+  });
+
+  useLayoutEffect(() => {
+    // Commit Phase - Layout 단계 (동기적)
+    measureDOM();
+  });
+}
+```
+
+## 🔗 동시성 기능과의 연관성
+
+### Suspense와 Fiber
+
+```js
+// Suspense로 지연 로딩 처리
+function App() {
+  return (
+    <div>
+      <Header />
+      <Suspense fallback={<Loading />}>
+        <AsyncComponent />
+      </Suspense>
+    </div>
+  );
+}
+
+// Fiber의 역할:
+// 1. AsyncComponent 로딩 중에도 Header는 정상 렌더링
+// 2. 데이터 로딩 완료 시 우선순위에 따라 업데이트
+// 3. 로딩 상태 전환을 부드럽게 처리
+```
+
+### Concurrent Mode
+
+```js
+// React 18의 Concurrent Features
+function SearchApp() {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState([]);
+
+  const handleSearch = (value) => {
+    setQuery(value); // 즉시 업데이트
+
+    startTransition(() => {
+      // 낮은 우선순위로 처리
+      setResults(expensiveSearch(value));
+    });
+  };
+
+  return (
+    <div>
+      <SearchInput value={query} onChange={handleSearch} />
+      {/* 검색 중에도 입력은 즉시 반응 */}
+      <SearchResults results={results} />
+    </div>
+  );
+}
+```
+
+### React Server Components
+
+**Fiber의 기여**
+
+- 서버 컴포넌트와 클라이언트 컴포넌트 경계 관리
+- 스트리밍 렌더링 지원
+- 하이드레이션 우선순위 처리
+
+## 🎯 실제 성능 개선 사례
+
+### Before Fiber
+
+```js
+// 10,000개 아이템 렌더링
+function LargeList({ items }) {
+  return (
+    <div>
+      {items.map((item) => (
+        <ExpensiveItem key={item.id} data={item} />
+      ))}
+    </div>
+  );
+}
+
+// 문제점:
+// - 전체 리스트를 한 번에 처리
+// - 렌더링 중 사용자 입력 차단 (300ms+)
+// - 스크롤이나 클릭 응답 불가
+```
+
+### After Fiber
+
+```js
+// 동일한 컴포넌트, Fiber가 자동 최적화
+function LargeList({ items }) {
+  return (
+    <div>
+      {items.map((item) => (
+        <ExpensiveItem key={item.id} data={item} />
+      ))}
+    </div>
+  );
+}
+
+// 개선점:
+// - 자동 타임 슬라이싱 (5ms 단위)
+// - 렌더링 중에도 사용자 입력 처리
+// - 16ms 프레임 예산 준수
+// - 부드러운 사용자 경험
+```
+
+### 성능 측정 결과
+
+| 메트릭             | React 15  | React 16+ (Fiber) |
+| ------------------ | --------- | ----------------- |
+| **First Paint**    | 300ms     | 16ms              |
+| **Input Response** | 차단됨    | 즉시 반응         |
+| **Frame Drops**    | 많음      | 최소화            |
+| **메모리 사용량**  | 스택 증가 | 안정적            |
+
+## 🚀 개발자를 위한 실무 팁
+
+### 1. Fiber 활용 최적화
+
+```js
+// useDeferredValue로 비중요 업데이트 지연
+function SearchResults({ query }) {
+  const deferredQuery = useDeferredValue(query);
+  const results = useMemo(() => searchDatabase(deferredQuery), [deferredQuery]);
+
+  return <ResultsList results={results} />;
+}
+
+// startTransition으로 우선순위 조정
+function FilteredList({ items, filter }) {
+  const [isPending, startTransition] = useTransition();
+  const [filteredItems, setFilteredItems] = useState(items);
+
+  const handleFilter = (newFilter) => {
+    startTransition(() => {
+      setFilteredItems(items.filter(newFilter));
+    });
+  };
+
+  return (
+    <div>
+      <FilterInput onChange={handleFilter} />
+      {isPending && <Spinner />}
+      <ItemList items={filteredItems} />
+    </div>
+  );
+}
+```
+
+### 2. 성능 프로파일링
+
+```js
+// React DevTools Profiler 활용
+import { Profiler } from "react";
+
+function onRenderCallback(id, phase, actualDuration) {
+  console.log("Component:", id);
+  console.log("Phase:", phase); // mount or update
+  console.log("Duration:", actualDuration); // ms
+}
+
+<Profiler id="App" onRender={onRenderCallback}>
+  <App />
+</Profiler>;
+```
+
+### 3. Fiber 친화적 코딩 패턴
+
+```js
+// ✅ 권장: 순수 함수형 컴포넌트
+function PureComponent({ data }) {
+  return useMemo(() => <div>{expensiveCalculation(data)}</div>, [data]);
+}
+
+// ❌ 지양: Render Phase에서 사이드 이펙트
+function ProblematicComponent({ data }) {
+  // 렌더링 중 API 호출 - Fiber에서 여러 번 실행될 수 있음
+  fetch("/api/analytics"); // 잘못된 위치
+
+  return <div>{data}</div>;
+}
+
+// ✅ 수정: useEffect로 분리
+function GoodComponent({ data }) {
+  useEffect(() => {
+    fetch("/api/analytics"); // 올바른 위치
+  }, []);
+
+  return <div>{data}</div>;
+}
+```
+
+---
+
+<Callout title="React Fiber는 개발자가 직접 제어하는 API가 아닙니다">
+
+Fiber는 React 내부 구현이므로 개발자가 직접 조작할 필요 없이, React가 자동으로 최적화를 수행합니다. 대신 Concurrent Features(startTransition, useDeferredValue 등)를 활용하여 Fiber의 이점을 극대화할 수 있습니다.
+
+</Callout>
