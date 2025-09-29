@@ -20,7 +20,7 @@ export default async function Page({
   let lastEdit;
   try {
     lastEdit = await getGithubLastEdit({
-      path: `content/docs/${page.file.path}`,
+      path: `content/docs/${page.path}`,
       owner: "front-jb",
       repo: "website",
       token: process.env.NEXT_PUBLIC_GITHUB_TOKEN,
@@ -41,7 +41,7 @@ export default async function Page({
         sha: "master",
         owner: "front-jb",
         repo: "website",
-        path: `content/docs/${page.file.path}`,
+        path: `content/docs/${page.path}`,
       }}
     >
       <DocsTitle>{page.data.title}</DocsTitle>
