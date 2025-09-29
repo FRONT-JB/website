@@ -3,7 +3,11 @@ title: "프론트엔드"
 description: 프론트엔드 관련 문서
 ---
 
-import { AppWindowMacIcon, MicVocalIcon } from "lucide-react";
+import {
+  AppWindowMacIcon,
+  MicVocalIcon,
+  GraduationCapIcon,
+} from "lucide-react";
 import Image from "next/image";
 
 <Cards className='mt-4'>
@@ -13,6 +17,20 @@ import Image from "next/image";
   icon={<AppWindowMacIcon />}
   href="/docs/general/nextjs/trouble-shooting"
   description="Next.js와 관련된 내용을 정리한 공간"
+/>
+
+<Card
+  title="강의 보기"
+  href="/docs/general/lecture"
+  icon={<GraduationCapIcon />}
+  description="강의 관련 문서"
+/>
+
+<Card
+  title="책 읽기"
+  href="/docs/general/books"
+  icon={<GraduationCapIcon />}
+  description="책 관련 문서"
 />
 
 <Card

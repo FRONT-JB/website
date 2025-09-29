@@ -1,5 +1,5 @@
 {
   "title": "프론트엔드",
   "root": true,
-  "pages": ["nextjs", "interview"]
+  "pages": ["lecture", "books", "interview", "nextjs"]
 }

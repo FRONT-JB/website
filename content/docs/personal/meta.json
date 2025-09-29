@@ -1,14 +1,5 @@
 {
   "title": "기록",
   "root": true,
-  "pages": [
-    "index",
-    "---학습---",
-    "lecture",
-    "books",
-    "---오늘은 여기까지---",
-    "algorithm",
-    "2025",
-    "..."
-  ]
+  "pages": ["index", "---오늘은 여기까지---", "2025", "algorithm", "..."]
 }
