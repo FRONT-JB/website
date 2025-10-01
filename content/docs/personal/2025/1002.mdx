@@ -1,0 +1,395 @@
+---
+title: "10월 02일"
+description: "NextAuth.js와 Zod를 활용한 타입 안전 인증 시스템 구축"
+---
+
+## 오늘 배운 것 (TIL)
+
+NextAuth.js v5와 Zod 4.x를 활용한 인증 시스템 구축 경험
+
+## 핵심 요약 (TL;DR)
+
+NextAuth.js v5의 JWT 콜백과 Zod 4.x의 런타임 검증을 결합하여 타입 안전한 인증 시스템을 구현했다. 토큰 갱신 최적화와 에러 처리 체계화를 통해 안정적인 사용자 경험을 제공했다.
+
+---
+
+## NextAuth.js v5 핵심 개념
+
+### 1. App Router 네이티브 지원
+
+```typescript
+// v5: auth() 헬퍼로 서버 컴포넌트에서 직접 세션 접근
+import NextAuth from 'next-auth';
+
+export const { handlers, auth, signIn, signOut } = NextAuth({
+  providers: [
+    Credentials({
+      credentials: {
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" }
+      },
+      async authorize(credentials) {
+        // 백엔드 API 호출
+        const response = await fetch(`${API_URL}/auth/login`, {
+          method: 'POST',
+          body: JSON.stringify(credentials),
+        });
+
+        if (!response.ok) return null;
+        return await response.json();
+      }
+    })
+  ],
+  callbacks: {
+    async jwt({ token, account }) {
+      // 토큰 관리 로직
+    },
+    async session({ session, token }) {
+      // 세션에 토큰 추가
+      session.accessToken = token.accessToken;
+      return session;
+    }
+  }
+});
+```
+
+**v5의 장점**:
+- `auth()` 함수로 서버 컴포넌트에서 직접 세션 접근 가능
+- API Route Handler 자동 생성
+- 미들웨어 통합 간소화
+
+---
+
+### 2. JWT 콜백 토큰 갱신 전략
+
+```typescript
+async jwt({ token, account }) {
+  const REFRESH_THRESHOLD = 5 * 60 * 1000; // 5분
+  const now = Date.now();
+
+  // 초기 로그인: 백엔드 토큰 저장
+  if (account?.access_token) {
+    return {
+      accessToken: account.access_token,
+      refreshToken: account.refresh_token,
+      expiresAt: account.expires_at * 1000,
+    };
+  }
+
+  // 만료 5분 전 사전 갱신
+  if (token.expiresAt - now < REFRESH_THRESHOLD) {
+    return await refreshAccessToken(token);
+  }
+
+  return token;
+}
+```
+
+**사전 갱신의 이점**:
+- 사용자가 요청 중 토큰 만료를 경험하지 않음
+- Race condition 방지
+- 갱신 실패 시 재시도 여유 확보
+
+---
+
+### 3. 지수적 백오프 재시도 구현
+
+```typescript
+async function refreshAccessToken(token: JWT, attempt = 0): Promise<JWT> {
+  const MAX_RETRIES = 3;
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+      method: 'POST',
+      body: JSON.stringify({ refreshToken: token.refreshToken }),
+    });
+
+    if (!response.ok) {
+      return { ...token, error: 'RefreshTokenError' };
+    }
+
+    const data = await response.json();
+    return {
+      ...token,
+      accessToken: data.accessToken,
+      expiresAt: data.expiresAt,
+    };
+  } catch (error) {
+    if (attempt < MAX_RETRIES) {
+      // 지수적 백오프 + 랜덤 지터
+      const baseDelay = Math.pow(2, attempt) * 100;
+      const jitter = Math.random() * 100;
+
+      await new Promise(resolve => setTimeout(resolve, baseDelay + jitter));
+      return refreshAccessToken(token, attempt + 1);
+    }
+
+    return { ...token, error: 'RefreshTokenExpired' };
+  }
+}
+```
+
+**지터의 중요성**: 동시 다발적 재시도로 인한 서버 부하 분산 ("Thundering Herd" 문제 방지)
+
+---
+
+### 4. 세션 타입 확장
+
+```typescript
+// types/next-auth.d.ts
+declare module 'next-auth' {
+  interface Session {
+    accessToken: string;
+    refreshToken: string;
+    expiresAt: number;
+    error?: 'RefreshTokenExpired';
+  }
+
+  interface JWT {
+    accessToken: string;
+    refreshToken: string;
+    expiresAt: number;
+    error?: 'RefreshTokenExpired';
+  }
+}
+```
+
+**효과**: IDE 자동 완성, 타입 안전성, 컴파일 타임 에러 체크
+
+---
+
+## Zod 4.x 마이그레이션
+
+### 주요 Breaking Changes
+
+```typescript
+// Zod 3.x → 4.x 변경사항
+// Before
+z.string({
+  required_error: "이메일을 입력하세요",
+  invalid_type_error: "문자열만 가능합니다"
+})
+
+// After
+z.string({ message: "이메일을 입력하세요" })
+
+// 에러 객체
+// Before: error.errors
+// After: error.issues
+```
+
+---
+
+### Zod + React Hook Form 통합
+
+```typescript
+// schemas/auth.ts
+export const loginSchema = z.object({
+  email: z
+    .string({ message: "이메일을 입력하세요" })
+    .email({ message: "올바른 이메일 형식이 아닙니다" }),
+  password: z
+    .string({ message: "비밀번호를 입력하세요" })
+    .min(8, { message: "비밀번호는 최소 8자 이상이어야 합니다" }),
+});
+
+export type LoginForm = z.infer<typeof loginSchema>;
+```
+
+```typescript
+// app/(public)/login/page.tsx
+import { zodResolver } from '@hookform/resolvers/zod';
+
+export default function LoginPage() {
+  const form = useForm<LoginForm>({
+    resolver: zodResolver(loginSchema),
+  });
+
+  const onSubmit = async (data: LoginForm) => {
+    // data는 이미 Zod 검증 완료
+    await signIn('credentials', data);
+  };
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)}>
+        <FormField name="email" ... />
+        <FormField name="password" ... />
+      </form>
+    </Form>
+  );
+}
+```
+
+**장점**: 선언적 검증, 실시간 에러 표시, 타입 안전성
+
+---
+
+### Zod 에러 포맷팅 헬퍼
+
+```typescript
+// utils/zod-helpers.ts
+export function formatZodError(error: ZodError): string {
+  return error.issues
+    .map(issue => `${issue.path.join('.')}: ${issue.message}`)
+    .join(', ');
+}
+
+// 사용 예시
+const result = loginSchema.safeParse(formData);
+if (!result.success) {
+  toast.error(formatZodError(result.error));
+}
+```
+
+---
+
+## 실전 적용
+
+### 1. API 클라이언트 자동 인증
+
+```typescript
+// utils/api-client/index.ts
+import ky from 'ky';
+import { getSession } from 'next-auth/react';
+
+export const apiClient = ky.create({
+  prefixUrl: process.env.NEXT_PUBLIC_API_URL,
+  hooks: {
+    beforeRequest: [
+      async (request) => {
+        const session = await getSession();
+        if (session?.accessToken) {
+          request.headers.set('Authorization', `Bearer ${session.accessToken}`);
+        }
+      },
+    ],
+  },
+});
+```
+
+**효과**: 매 요청마다 수동 헤더 설정 불필요
+
+---
+
+### 2. 서버 컴포넌트용 API 클라이언트
+
+```typescript
+// utils/api-client/server.ts
+import { auth } from '@/auth';
+
+export async function createServerApiWithAuth() {
+  const session = await auth();
+
+  return ky.create({
+    prefixUrl: process.env.NEXT_PUBLIC_API_URL,
+    headers: {
+      Authorization: `Bearer ${session.accessToken}`,
+    },
+  });
+}
+
+// 사용
+export default async function ProfilePage() {
+  const api = await createServerApiWithAuth();
+  const user = await api.get('users/me').json();
+  return <div>{user.name}</div>;
+}
+```
+
+---
+
+### 3. 타입 안전 에러 처리
+
+```typescript
+// constants/auth-errors.ts
+export const TOKEN_ERROR_CODES = [401, 403] as const;
+
+export const AUTH_ERROR_MESSAGES = {
+  INVALID_CREDENTIALS: '이메일 또는 비밀번호가 올바르지 않습니다',
+  TOKEN_EXPIRED: '세션이 만료되었습니다. 다시 로그인해주세요',
+  REFRESH_FAILED: '세션 갱신에 실패했습니다',
+} as const;
+
+// 타입 가드
+export function isTokenError(error: unknown): error is HTTPError {
+  return (
+    error instanceof HTTPError &&
+    TOKEN_ERROR_CODES.includes(error.response.status as any)
+  );
+}
+
+// 사용
+if (isTokenError(error)) {
+  toast.error(AUTH_ERROR_MESSAGES.TOKEN_EXPIRED);
+  signOut();
+}
+```
+
+---
+
+## 성능 최적화
+
+### Header SSR/CSR 분리
+
+```typescript
+// header/header.tsx (서버 컴포넌트)
+export default async function Header() {
+  const session = await auth();
+  const isAuthenticated = !!session?.accessToken;
+
+  return <Navigation initialIsAuthenticated={isAuthenticated} />;
+}
+
+// header/navigation.tsx (클라이언트)
+'use client';
+
+export default function Navigation({ initialIsAuthenticated }: Props) {
+  const { isAuthenticated: clientAuth, isLoading } = useAuth();
+
+  // 로딩 중에는 서버 값, 이후 클라이언트 값 사용
+  const isAuthenticated = isLoading ? initialIsAuthenticated : clientAuth;
+
+  return <Button>{isAuthenticated ? 'Logout' : 'Login'}</Button>;
+}
+```
+
+**효과**: 초기 렌더링 깜빡임 제거, SEO 친화적
+
+---
+
+## 배운 점
+
+### 1. 타입 안전성의 3단계 레이어
+
+1. **컴파일 타임**: TypeScript 타입 체크
+2. **런타임**: Zod 스키마 검증
+3. **네트워크**: API 응답 Zod 검증
+
+이 레이어드 접근으로 외부 데이터의 안전성을 완벽히 보장했다.
+
+---
+
+### 2. NextAuth의 "서버 우선" 철학
+
+- `auth()` 함수는 서버 전용
+- 클라이언트는 `useSession()` 훅 사용
+- 미들웨어에서 세션 검증으로 보안 강화
+
+이 구조를 이해하니 서버/클라이언트 컴포넌트 분리가 자연스러워졌다.
+
+---
+
+### 3. 에러 처리가 UX의 핵심
+
+- **자동 로그아웃**: 토큰 만료 시 자동 처리로 혼란 방지
+- **재시도 로직**: 지수적 백오프로 일시적 오류 대응
+- **사용자 친화 메시지**: 기술적 에러를 이해 가능한 메시지로 변환
+
+---
+
+## 참고 자료
+
+- [NextAuth.js v5 공식 문서](https://authjs.dev)
+- [Zod 공식 문서](https://zod.dev)
+- [React Hook Form + Zod 통합](https://react-hook-form.com/get-started#SchemaValidation)
