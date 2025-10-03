@@ -1,0 +1,521 @@
+---
+title: "10월 03일"
+description: "React 19 Concurrent Features와 Actions 패턴으로 비동기 UX 개선하기"
+---
+
+## 오늘 배운 것 (TIL)
+
+React 19의 Concurrent Features(`useTransition`, `useOptimistic`, `useDeferredValue`)와 Actions 패턴을 활용한 비동기 UI 개선
+
+## 핵심 요약 (TL;DR)
+
+React 19의 concurrent features를 활용하면 깜빡이는 로딩 상태, race condition, 불안정한 UX를 해결할 수 있다. Actions 패턴으로 컴포넌트 외부에서 비동기 작업을 조율하고, 곧 출시될 View Transitions와 결합하여 부드러운 애니메이션을 제공할 수 있다.
+
+---
+
+## 비동기 UI의 일반적인 문제점
+
+### 1. 깜빡이는 Pending 상태 (Flickering States)
+
+```typescript
+// ❌ 문제: 수동 로딩 상태 관리
+function AsyncSelect() {
+  const [selected, setSelected] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSelect = async (value) => {
+    setIsLoading(true); // 로딩 시작
+    const result = await fetchData(value);
+    setSelected(result);
+    setIsLoading(false); // 로딩 종료
+  };
+
+  return <Select isLoading={isLoading} onChange={handleSelect} />;
+}
+```
+
+**문제점**:
+- 여러 셀렉트를 빠르게 클릭하면 먼저 완료된 요청이 로딩 상태를 덮어씀
+- Race condition 발생: 나중 요청이 먼저 완료되면 잘못된 상태 표시
+- 각 컴포넌트가 독립적으로 로딩 상태 관리 → 전체 UI 불일치
+
+---
+
+### 2. 즉각적인 피드백 부재
+
+사용자가 버튼을 클릭해도 UI가 즉시 반응하지 않으면 "클릭이 안 됐나?" 싶어 여러 번 클릭하게 됨.
+
+---
+
+## React 19 Concurrent Features
+
+### 1. useTransition: 여러 이벤트에 걸친 작업 조율
+
+```typescript
+'use client';
+
+function ImprovedAsyncSelect() {
+  const [selected, setSelected] = useState(null);
+  const [isPending, startTransition] = useTransition();
+
+  const handleSelect = async (value) => {
+    startTransition(async () => {
+      const result = await fetchData(value);
+      setSelected(result);
+    });
+  };
+
+  return <Select isPending={isPending} onChange={handleSelect} />;
+}
+```
+
+**개선 사항**:
+- ✅ `isPending`이 모든 비동기 작업이 완료될 때까지 `true` 유지
+- ✅ 수동 로딩 상태 관리 제거
+- ✅ 여러 요청을 하나의 transition으로 배치 처리
+
+---
+
+### 2. useOptimistic: 낙관적 업데이트
+
+```typescript
+'use client';
+
+function OptimisticSelect() {
+  const [selected, setSelected] = useState<Item[]>([]);
+  const [optimisticSelected, setOptimisticSelected] = useOptimistic(selected);
+  const [isPending, startTransition] = useTransition();
+
+  const handleSelect = (items: Item[]) => {
+    startTransition(async () => {
+      setOptimisticSelected(items); // 즉시 UI 업데이트
+      const result = await saveToServer(items);
+      setSelected(result); // 서버 응답으로 실제 업데이트
+    });
+  };
+
+  return <Select selected={optimisticSelected} isPending={isPending} />;
+}
+```
+
+**동작 원리**:
+1. `setOptimisticSelected(items)` 호출 → UI 즉시 업데이트
+2. Transition이 진행되는 동안 낙관적 상태 유지
+3. Transition 완료 → 실제 `selected` 값으로 자동 롤백
+4. 서버 요청 실패 시 자동으로 이전 상태로 복원
+
+---
+
+### 3. useDeferredValue: 무거운 렌더링 지연
+
+```typescript
+'use client';
+
+function SearchableTalksList() {
+  const [search, setSearch] = useState('');
+  const deferredSearch = useDeferredValue(search);
+  const isStale = search !== deferredSearch;
+
+  return (
+    <>
+      <input
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+      />
+      {isStale && <Spinner />}
+      <TalksList search={deferredSearch} />
+    </>
+  );
+}
+```
+
+**효과**:
+- 입력 필드는 즉시 반응 (블로킹 없음)
+- 무거운 리스트 렌더링은 지연 처리
+- `isStale`로 검색 중 상태 표시 가능
+
+---
+
+## Actions 패턴: 재사용 가능한 비동기 컴포넌트
+
+### 문제 상황
+
+RouterSelect 컴포넌트를 만들었는데, 각 select마다 다른 로딩 UI를 보여주고 싶다면?
+
+```typescript
+// 필터 1: 로딩 바 표시
+<RouterSelect name="year" />
+
+// 필터 2: 성공 토스트 표시
+<RouterSelect name="tag" />
+
+// 필터 3: 컨페티 효과
+<RouterSelect name="speaker" />
+```
+
+---
+
+### Actions 패턴 구현
+
+**Action = Transition 내에서 호출되는 함수**
+
+```typescript
+'use client';
+
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useOptimistic, useTransition } from 'react';
+
+type Props = {
+  name: string;
+  selected: SelectItem[];
+  options: SelectItem[];
+  selectAction?: (items: SelectItem[]) => void | Promise<void>;
+  hideSpinner?: boolean;
+};
+
+export default function RouterSelect({
+  name,
+  selected,
+  selectAction,
+  hideSpinner,
+  ...otherProps
+}: Props) {
+  const [optimisticSelected, setOptimisticSelected] = useOptimistic(selected);
+  const [isPending, startTransition] = useTransition();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  return (
+    <Select
+      {...otherProps}
+      name={name}
+      isPending={isPending}
+      selected={optimisticSelected}
+      hideSpinner={hideSpinner}
+      onSelect={(items) => {
+        startTransition(async () => {
+          setOptimisticSelected(items); // 낙관적 업데이트
+
+          // 부모가 주입한 커스텀 로직 실행
+          await selectAction?.(items);
+
+          // 라우터 푸시 (Next.js는 기본적으로 transition 사용)
+          router.push(
+            createQueryString(searchParams, {
+              name,
+              value: items,
+            })
+          );
+        });
+      }}
+    />
+  );
+}
+```
+
+---
+
+### Actions 패턴 활용 예시
+
+#### 1. 로딩 바 + 낙관적 진행률
+
+```typescript
+'use client';
+
+function YearFilter() {
+  const [progress, setProgress] = useState(0);
+  const [optimisticProgress, setOptimisticProgress] = useOptimistic(progress);
+
+  return (
+    <>
+      <LoadingBar progress={optimisticProgress} />
+      <RouterSelect
+        name="year"
+        hideSpinner={true}
+        selectAction={(items) => {
+          setOptimisticProgress(prev => Math.min(prev + 30, 100)); // 즉시 30% 증가
+
+          // Transition 완료 시 자동으로 실제 값으로 업데이트
+          setProgress(100);
+        }}
+      />
+    </>
+  );
+}
+```
+
+**장점**: 클릭 즉시 진행률이 증가하고, 완료되면 100%로 자동 설정
+
+---
+
+#### 2. 성공 토스트 + 테마 변경
+
+```typescript
+'use client';
+
+function TagFilter() {
+  return (
+    <RouterSelect
+      name="tag"
+      selectAction={async (items) => {
+        // 즉시 실행되는 명령형 코드
+        updateThemeColor(items);
+
+        // Transition 완료 후 실행
+        await new Promise(resolve => setTimeout(resolve, 0));
+        toast.success(`${items.length}개 태그 선택됨`);
+      }}
+    />
+  );
+}
+```
+
+---
+
+#### 3. 컨페티 효과 (자동 리셋)
+
+```typescript
+'use client';
+
+function SpeakerFilter() {
+  const [exploding, setExploding] = useOptimistic(false);
+
+  return (
+    <>
+      {exploding && <ConfettiExplosion />}
+      <RouterSelect
+        name="speaker"
+        selectAction={(items) => {
+          setExploding(true);
+          // Transition 완료 시 자동으로 false로 리셋 (수동 관리 불필요)
+        }}
+      />
+    </>
+  );
+}
+```
+
+**핵심**: `useOptimistic`으로 상태를 관리하면 transition 완료 시 자동 리셋
+
+---
+
+## View Transitions (실험적 기능)
+
+React에 곧 도입될 기능으로, concurrent features와 결합하여 자동 애니메이션 제공.
+
+### 1. 기본 사용법
+
+```typescript
+import { unstable_ViewTransition as ViewTransition } from 'react';
+
+export default function Layout({ children }) {
+  return (
+    <ViewTransition>
+      {children}
+    </ViewTransition>
+  );
+}
+```
+
+**효과**: Transition이나 Suspense로 업데이트되는 UI에 자동 crossfade 애니메이션 적용
+
+---
+
+### 2. 커스텀 애니메이션
+
+```typescript
+'use client';
+
+function TalksGrid({ talks }) {
+  return (
+    <ViewTransition
+      enter="slide-up"
+      exit="slide-down"
+      css="none" // 하위 요소는 애니메이션 비활성화
+    >
+      <div key={talks.length}> {/* key 변경 시 애니메이션 트리거 */}
+        {talks.map(talk => <TalkCard key={talk.id} {...talk} />)}
+      </div>
+    </ViewTransition>
+  );
+}
+```
+
+```css
+/* globals.css */
+::view-transition-new(slide-up) {
+  animation: slideUp 300ms ease-out;
+}
+
+::view-transition-old(slide-down) {
+  animation: slideDown 300ms ease-out;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes slideDown {
+  from { transform: translateY(0); opacity: 1; }
+  to { transform: translateY(-20px); opacity: 0; }
+}
+```
+
+---
+
+### 3. Shared Element Transition
+
+두 컴포넌트 간 자연스러운 모핑 애니메이션:
+
+```typescript
+// TalkCard.tsx
+function TalkCard({ talk }) {
+  return (
+    <ViewTransition name={`talk-${talk.id}`}>
+      <div>{talk.title}</div>
+    </ViewTransition>
+  );
+}
+
+// TalkDetail.tsx
+function TalkDetail({ talk }) {
+  return (
+    <ViewTransition name={`talk-${talk.id}`}>
+      <div>
+        <h1>{talk.title}</h1>
+        <p>{talk.description}</p>
+      </div>
+    </ViewTransition>
+  );
+}
+```
+
+**결과**: 카드 클릭 시 카드에서 상세 페이지로 자연스럽게 확장되는 애니메이션
+
+---
+
+## useDeferredValue + View Transitions
+
+```typescript
+'use client';
+
+function SearchableList() {
+  const [search, setSearch] = useState('');
+  const deferredSearch = useDeferredValue(search);
+
+  return (
+    <>
+      <input value={search} onChange={(e) => setSearch(e.target.value)} />
+      <ViewTransition>
+        <List search={deferredSearch} />
+      </ViewTransition>
+    </>
+  );
+}
+```
+
+**효과**: 검색어 입력 시 리스트가 부드럽게 crossfade 되며 업데이트
+
+---
+
+## 실전 적용 시나리오: 컨퍼런스 토크 필터링
+
+### 전체 구조
+
+```
+TalksExplorer (서버 컴포넌트)
+├── Filters (클라이언트)
+│   ├── RouterSelect (year) - 로딩 바
+│   ├── RouterSelect (tag) - 토스트
+│   ├── RouterSelect (speaker) - 컨페티
+│   └── RouterSelect (conference)
+└── TalksGrid (서버 컴포넌트 - Suspense)
+    └── ViewTransition (슬라이드 애니메이션)
+```
+
+### 흐름
+
+1. 사용자가 year select 클릭
+2. **즉시**: 낙관적 업데이트로 선택된 년도 표시 + 진행률 30%
+3. **동시**: Router push로 서버 컴포넌트 재생성 시작
+4. **Suspense**: TalksGrid가 fallback으로 교체 (슬라이드 다운 애니메이션)
+5. **완료**: 새 데이터 로드 완료 → 진행률 100% → 슬라이드 업 애니메이션
+
+---
+
+## 배운 점
+
+### 1. Concurrent Features는 레이어드 아키텍처
+
+```
+useOptimistic (즉각 반응)
+    ↓
+useTransition (작업 조율)
+    ↓
+useDeferredValue (무거운 작업 지연)
+    ↓
+View Transitions (시각적 피드백)
+```
+
+각 레이어가 명확한 역할을 가지며, 조합하여 최상의 UX 제공.
+
+---
+
+### 2. Actions 패턴의 핵심은 "명시적 인터페이스"
+
+```typescript
+// ❌ 암묵적: onSelect는 그냥 콜백
+<RouterSelect onSelect={handleSelect} />
+
+// ✅ 명시적: selectAction은 transition과 조율됨을 보장
+<RouterSelect selectAction={handleSelect} />
+```
+
+이름에 "action"을 붙임으로써 "이 함수는 transition 안에서 실행된다"는 계약을 명시.
+
+---
+
+### 3. Next.js App Router는 기본적으로 Transition 기반
+
+```typescript
+router.push('/path'); // 내부적으로 startTransition 사용
+```
+
+따라서 RouterSelect 같은 컴포넌트는 별도 설정 없이 transition 기반 애니메이션 지원.
+
+---
+
+### 4. useOptimistic의 숨은 능력: 자동 상태 관리
+
+```typescript
+// Before: 수동 리셋 필요
+const [exploding, setExploding] = useState(false);
+setExploding(true);
+setTimeout(() => setExploding(false), 3000);
+
+// After: 자동 리셋
+const [exploding, setExploding] = useOptimistic(false);
+setExploding(true); // Transition 완료 시 자동으로 false
+```
+
+일회성 효과(토스트, 컨페티 등)에 완벽.
+
+---
+
+### 5. View Transitions는 React의 "경계"를 시각화
+
+- Transition 시작/종료
+- Suspense fallback 교체
+- Deferred value 업데이트
+
+이 모든 순간에 React가 "뭔가 바뀌었다"는 것을 알고 있으며, View Transitions는 그 변화를 자동으로 애니메이션화.
+
+---
+
+## 참고 자료
+
+- [React Universe Conf 2025 - Aurora Scharff 발표](https://www.youtube.com/watch?v=I3AsmAWWGEs)
+- [GitHub: next15-conferences](https://github.com/aurorascharff/next15-conferences)
+- [React 19 RC 문서](https://react.dev/blog/2024/04/25/react-19)
+- [View Transitions 실험적 문서](https://react.dev)
