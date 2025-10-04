@@ -1,0 +1,442 @@
+---
+title: "10월 04일"
+description: "React Compiler: memo를 지우고 값의 흐름에 집중하는 새로운 패러다임"
+---
+
+## 오늘 배운 것 (TIL)
+
+FEConf 2025 발표를 통해 React Compiler의 동작 원리와 새로운 개발 멘탈 모델 학습
+
+## 핵심 요약 (TL;DR)
+
+React Compiler는 AST를 제어 흐름 그래프로 변환하여 리액티브 값의 흐름을 추적하고 자동으로 메모이제이션을 수행한다. 이제 "어디에 memo를 써야 할까"가 아닌 "값이 어떻게 흐르는가"에 집중하는 개발 패러다임으로 전환해야 한다.
+
+---
+
+## React Compiler란?
+
+### 배경
+
+- **프로젝트명**: React Forget (2021년 시작) → React Compiler (2024년 정식 공개)
+- **목적**: 개발자가 수동으로 `memo`, `useMemo`, `useCallback`을 관리하지 않아도 자동 최적화
+- **Meta 적용 사례**: Quest Store, Instagram.com
+
+### 성능 개선 효과
+
+```
+인터랙션 성능: 2.5배 향상
+초기 로드/네비게이션: 12% 개선
+메모리 사용량: 증가 없음
+```
+
+---
+
+## 기존 메모이제이션의 문제점
+
+### 수동 메모이제이션의 딜레마
+
+```typescript
+// ❌ 메모이제이션 없음: 불필요한 리렌더링
+function TextComponent({ color }) {
+  const expensiveResult = expensiveCalculation(color);
+  return <div style={{ color }}>{expensiveResult}</div>;
+}
+
+// ⚠️ 메모이제이션 추가: 코드 복잡도 증가 + 의존성 배열 관리 부담
+function TextComponent({ color }) {
+  const expensiveResult = useMemo(
+    () => expensiveCalculation(color),
+    [color]
+  );
+  return <div style={{ color }}>{expensiveResult}</div>;
+}
+```
+
+**트레이드오프**:
+
+- 메모이제이션은 공짜가 아님 (메모리 사용, 비교 오버헤드)
+- 의존성 배열 관리 실수 → 의도치 않은 메모이제이션
+- 최적화 코드가 많아지면 본래 의도가 희석됨
+
+---
+
+## React Compiler 동작 원리
+
+### 컴파일 결과 예시
+
+**컴파일 전:**
+
+```typescript
+function TextComponent({ color }) {
+  return <div style={{ color }}>Hello</div>;
+}
+```
+
+**컴파일 후:**
+
+```typescript
+function TextComponent(props) {
+  const $ = useMemoCache(2); // 캐시 배열 생성
+  const { color } = props;
+
+  let t0;
+  if ($[0] !== color) {
+    t0 = <div style={{ color }}>Hello</div>;
+    $[0] = color;
+    $[1] = t0;
+  } else {
+    t0 = $[1];
+  }
+  return t0;
+}
+```
+
+**핵심 메커니즘**:
+
+1. `useMemoCache(size)`: Fiber 노드에 캐시 배열 저장
+2. 조건문: 값이 변경되었을 때만 재계산
+3. 캐시 활용: 동일한 값이면 이전 결과 반환
+
+---
+
+## 컴파일 파이프라인 (왜 "컴파일러"인가?)
+
+### 1. Babel AST → HIR (High-level Intermediate Representation)
+
+```
+추상 구문 트리 (트리 구조)
+        ↓
+제어 흐름 그래프 (실행 경로 표현)
+```
+
+**HIR의 구조**:
+
+- **블록**: 코드 실행 단위
+- **엣지**: 실행 흐름 (분기문, 반복문 등)
+
+**목적**: 코드의 구조가 아닌 **실행 흐름**을 명시적으로 표현
+
+---
+
+### 2. SSA 변환 (Static Single Assignment)
+
+```typescript
+// Before: 변수 여러 번 할당
+let x = 5;
+x = 10;
+console.log(x);
+
+// After: 각 할당을 독립적인 변수로 분리
+let x1 = 5;
+let x2 = 10;
+console.log(x2);
+```
+
+**효과**: 특정 순간에 변수가 어떤 값을 가지는지 명확히 추적 가능
+
+---
+
+### 3. 리액티브 값 추적 (Reactive Value Propagation)
+
+**리액티브 값 = 시간에 따라 변화할 수 있는 값**
+
+```typescript
+function Component({ color }) {
+  const [count, setCount] = useState(0);
+  const doubled = count * 2;
+  const message = `Count: ${doubled}`;
+
+  return <div>{message}</div>;
+}
+```
+
+**추적 순서**:
+
+1. 기본 리액티브 값 식별: `props.color`, `useState` 결과
+2. 파생 값 전파: `doubled`, `message`도 리액티브 값으로 표시
+3. 제어 흐름 그래프를 따라 전파
+
+---
+
+### 4. 스코프 그룹화 & React 코드 생성
+
+```typescript
+// 리액티브 값의 변화에 영향받는 코드 영역을 그룹화
+// → 메모이제이션 대상 결정
+// → useMemoCache와 조건문으로 변환
+```
+
+---
+
+## 흥미로운 케이스: 분기문과 메모이제이션 효율
+
+### 케이스 A: 순환 값에 취약
+
+```typescript
+function ComponentA({ value }) {
+  const result = expensiveCalc(value);
+  return <div>{result}</div>;
+}
+```
+
+**컴파일 결과**:
+
+```typescript
+const $ = useMemoCache(4);
+if ($[0] !== value) {
+  $[1] = expensiveCalc(value);
+  $[0] = value;
+}
+return $[1];
+```
+
+**문제**: `딸기 → 당근 → 수박 → 딸기`로 순환하면 매번 재계산
+
+---
+
+### 케이스 B: 분기문으로 개선
+
+```typescript
+function ComponentB({ value }) {
+  if (value === '딸기') return <div>{expensiveCalc(value)}</div>;
+  if (value === '당근') return <div>{expensiveCalc(value)}</div>;
+  return <div>{expensiveCalc(value)}</div>;
+}
+```
+
+**컴파일 결과**:
+
+```typescript
+const $ = useMemoCache(12);
+
+if (value === "딸기") {
+  if ($[0] !== "딸기") {
+    $[1] = expensiveCalc("딸기");
+    $[0] = "딸기";
+  }
+  return $[1];
+}
+
+if (value === "당근") {
+  if ($[4] !== "당근") {
+    $[5] = expensiveCalc("당근");
+    $[4] = "당근";
+  }
+  return $[5];
+}
+// ...
+```
+
+**장점**: 각 분기마다 독립 캐시 → 순환 시에도 재계산 안 함
+
+---
+
+## 리액티브 값의 중첩 (Nested Reactivity)
+
+**핵심 인사이트**: 컴파일러는 각 분기에서 **관측 가능한 값의 범위**를 파악
+
+```typescript
+// A: 모든 경우가 하나의 캐시 슬롯에 중첩
+value → [딸기|당근|수박] → 단일 캐시
+
+// B: 각 분기마다 확정된 값
+value === '딸기' → 딸기 전용 캐시
+value === '당근' → 당근 전용 캐시
+value === '수박' → 수박 전용 캐시
+```
+
+**트레이드오프**:
+
+- 캐시 크기 증가 (4개 → 12개)
+- 계산 횟수 감소 (순환 시 재사용)
+
+---
+
+## React Compiler의 한계점
+
+### 1. 낙관적 가정 (Optimistic Assumptions)
+
+**문제**: React 규칙을 지켰다고 가정하고 컴파일
+
+```typescript
+// ❌ 규칙 위반: 순수성 깨짐
+let globalCounter = 0;
+
+function Component() {
+  globalCounter++; // 사이드 이펙트
+  return <div>{globalCounter}</div>;
+}
+```
+
+**결과**:
+
+- 컴파일러가 정상 코드로 간주 → 메모이제이션 적용
+- 의도치 않은 동작 (에러 없이 조용히 잘못 작동)
+
+**대응 방안**:
+
+1. **ESLint 엄격 적용**: `eslint-plugin-react-compiler` 사용
+2. **점진적 도입**: `"use no memo"`, `"use memo"` 지시자 활용
+3. **도구 활용**: React Forget VS Code 익스텐션 (실험적)
+
+---
+
+### 2. 번들 크기 증가
+
+```typescript
+// 컴파일 전: 10줄
+// 컴파일 후: 20줄 (약 2배)
+```
+
+**증가 요인**:
+
+- `useMemoCache` 호출
+- 조건문 분기
+- 캐시 할당/비교 로직
+
+**완화 방법**:
+
+- 코드 스플리팅 최적화
+- 성능 향상과 트레이드오프 수용
+
+---
+
+## 새로운 개발 멘탈 모델
+
+### 1. React를 "언어 레벨"로 엄격히 준수
+
+```typescript
+// ❌ 피하기: ESLint 규칙 무시
+useEffect(() => {
+  // 마운트 시점만 실행하려고 의도적으로 빈 배열
+  fetchData();
+}, []); // eslint-disable-line
+
+// ✅ 권장: 규칙 준수
+useEffect(() => {
+  fetchData();
+}, [fetchData]);
+```
+
+---
+
+### 2. 값의 흐름(Flow)에 집중
+
+**기존 사고방식**:
+
+> "이 컴포넌트는 비싼 계산을 하니 `useMemo`를 써야겠다"
+
+**새로운 사고방식**:
+
+> "이 값은 어디서 오고, 어떻게 변화하고, 어디로 전파되는가?"
+
+**예시**: 분기문을 통해 값의 흐름을 명확히 정의하면 컴파일러가 더 효율적으로 최적화
+
+---
+
+### 3. 수동 메모이제이션에서 구조적 최적화로
+
+```typescript
+// Before: 메모이제이션 위치 고민
+const memoizedValue = useMemo(() => compute(a, b), [a, b]);
+
+// After: 값의 스코프와 분기 설계 고민
+if (condition) {
+  // 이 분기에서만 필요한 계산
+  const result = compute(a);
+}
+```
+
+---
+
+## Next.js와의 통합
+
+### App Router는 기본적으로 Transition 기반
+
+```typescript
+// router.push는 내부적으로 startTransition 사용
+router.push("/path");
+
+// React Compiler와 자연스럽게 통합
+// → 라우팅 전환 시 자동 메모이제이션 최적화
+```
+
+---
+
+## 실전 적용 가이드
+
+### 점진적 도입 전략
+
+```typescript
+// 1. 특정 파일만 컴파일 활성화
+"use memo";
+
+function OptimizedComponent() {
+  // ...
+}
+
+// 2. 특정 컴포넌트만 비활성화
+("use no memo");
+
+function LegacyComponent() {
+  // ...
+}
+```
+
+### 검증 프로세스
+
+1. **ESLint 먼저 적용**: 규칙 위반 사전 제거
+2. **작은 컴포넌트부터**: 사이드 이펙트 적은 UI 컴포넌트
+3. **성능 측정**: 번들 크기 vs 런타임 성능 트레이드오프 확인
+4. **점진적 확대**: 안정성 확인 후 범위 확대
+
+---
+
+## 배운 점
+
+### 1. 컴파일러 이론의 실용적 적용
+
+- React Compiler는 전통적인 컴파일러 기법(AST, CFG, SSA, DFA)을 프론트엔드 최적화에 적용한 사례
+- "고수준 → 저수준"의 컴파일이 아닌, "분석 → 최적화 → 재생성"의 트랜스파일 과정에서도 컴파일러 개념이 핵심 역할
+
+---
+
+### 2. 선언적 코드의 새로운 차원
+
+```typescript
+// 명령형: "어떻게 최적화할지" 명시
+const memoized = useMemo(() => calc(x), [x]);
+
+// 선언형: "무엇을 계산할지만" 명시 → 컴파일러가 최적화
+const result = calc(x);
+```
+
+React Compiler는 선언적 패러다임을 한 단계 더 발전시켰음
+
+---
+
+### 3. 분기문이 성능에 미치는 영향
+
+- 동일한 로직이라도 분기문 구조에 따라 메모이제이션 효율이 달라짐
+- 이는 "값의 관측 범위"를 좁힐수록 캐싱이 효율적이라는 원리를 보여줌
+
+---
+
+### 4. 도구의 철학 이해의 중요성
+
+React Compiler의 "낙관적 가정"을 이해하면:
+
+- 왜 React 규칙이 중요한지
+- 왜 순수성이 필수인지
+- 왜 ESLint가 선택이 아닌 필수인지
+
+명확해짐. 도구의 한계는 곧 사용법의 제약 조건
+
+---
+
+## 참고 자료
+
+- [FEConf 2025 발표 영상](https://www.youtube.com/watch?v=spx3LfL2JS0)
+- [React Compiler 공식 문서](https://react.dev/learn/react-compiler)
+- [React Compiler GitHub](https://github.com/facebook/react/tree/main/compiler)
+- [React 19 RC 문서](https://react.dev/blog/2024/04/25/react-19)
