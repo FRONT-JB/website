@@ -1,0 +1,210 @@
+---
+title: "10월 7일"
+description: "React Error Boundary 패턴 학습"
+---
+
+## 오늘 배운 것 (TIL)
+
+React Error Boundary 패턴과 적절한 에러 처리 전략
+
+## 핵심 요약 (TL;DR)
+
+Error Boundary는 렌더링 중 에러를 catch하여 UI 전체가 무너지지 않도록 하는 안전망. 기능 경계(Feature Boundary)를 기준으로 적용하는 것이 핵심이며, 이벤트 핸들러나 비동기 로직은 여전히 try-catch가 필요하다.
+
+---
+
+## Error Boundary 개념
+
+### 정의
+
+**렌더링 중 에러를 catch해서 Fallback UI를 보여주는 컴포넌트**
+
+### 등장 배경
+
+- React는 컴포넌트 하나에서 에러 발생 시 하위 트리 전체가 언마운트되어 빈 화면 표시
+- **Fault Tolerance**(결함 허용성): 일부가 고장나도 나머지는 정상 동작해야 함
+- 사용자에게 Fallback UI와 복구 액션 제공 필요
+
+---
+
+## Error Boundary의 한계
+
+### 잡을 수 없는 오류들
+
+1. **이벤트 핸들러 오류**
+   - 이벤트 핸들러는 root에 위임되어 Error Boundary 외부에서 동작
+   - 직접 try-catch 필요
+
+2. **비동기 로직 오류**
+   - Error Boundary 실행 완료 후 비동기 콜백이 실행됨
+   - 콜스택에서 Error Boundary가 이미 제거된 상태
+
+3. **서버 사이드 렌더링**
+   - Error Boundary 함수들은 브라우저 환경에서만 동작
+   - SSR 에러는 포착 불가
+
+4. **자식이 아닌 컴포넌트 오류**
+   - Error Boundary는 자신이 감싼 자식 컴포넌트의 에러만 catch
+
+### 요약
+
+**Error Boundary는 렌더링 라이프사이클 내 에러만 잡는다**
+
+---
+
+## Error Boundary 구현
+
+### 클래스형 컴포넌트 구조
+
+```typescript
+class ErrorBoundary extends React.Component {
+  // 1. render 단계에서 에러 catch, hasError 상태 변경
+  static getDerivedStateFromError(error) {
+    return { hasError: true };
+  }
+
+  // 2. 에러 리포팅 (Sentry, LogRocket, Datadog 등)
+  componentDidCatch(error, errorInfo) {
+    logErrorToService(error, errorInfo);
+  }
+
+  // 3. 에러 발생 시 Fallback UI, 아니면 children 반환
+  render() {
+    if (this.state.hasError) {
+      return <FallbackUI />;
+    }
+    return this.props.children;
+  }
+}
+```
+
+### 주요 메서드
+
+- `getDerivedStateFromError`: render 단계에서 에러 catch
+- `componentDidCatch`: 에러 로깅 및 리포팅
+- `render`: Fallback UI 또는 children 렌더링
+
+---
+
+## Error Boundary 배치 전략
+
+### ❌ 잘못된 접근 1: 최상단에만 배치
+
+```jsx
+<ErrorBoundary>
+  <App>
+    <ProductList /> {/* 여기서 에러 */}
+    <RecentProductList />
+    <TodayProductList />
+    <Cart />
+  </App>
+</ErrorBoundary>
+```
+
+**문제점:**
+
+- 한 곳의 오류가 전체 앱 오류처럼 보임
+- 정상 동작 가능한 UI도 모두 가려짐
+- Fault Tolerance 위배
+- 여러 에러 상황이 하나로 처리되어 불친절한 UX
+
+### ❌ 잘못된 접근 2: 모든 컴포넌트마다 배치
+
+```jsx
+<Payment>
+  <ErrorBoundary>
+    <CardNumberInput /> {/* 여기서 에러 */}
+  </ErrorBoundary>
+  <ErrorBoundary>
+    <CVCInput />
+  </ErrorBoundary>
+  <ErrorBoundary>
+    <PasswordInput />
+  </ErrorBoundary>
+  <ErrorBoundary>
+    <SubmitButton />
+  </ErrorBoundary>
+</Payment>
+```
+
+**문제점:**
+
+- 카드 번호만 고장나도 나머지로 결제 가능한 상황 발생
+- 시스템 일관성 깨짐
+
+### ✅ 올바른 접근: 기능 경계(Feature Boundary)에 배치
+
+**핵심 질문:**
+
+1. 이 컴포넌트의 에러가 어디까지 영향을 줘야 하는가?
+2. 이 컴포넌트가 고장나면 어떤 것들이 함께 고장나야 하는가?
+
+**예시 1: 상품 리스트 페이지**
+
+```jsx
+<ErrorBoundary>
+  <Search />
+</ErrorBoundary>
+<ErrorBoundary>
+  <Cart />
+</ErrorBoundary>
+<ErrorBoundary>
+  <RecentProducts />
+</ErrorBoundary>
+<ErrorBoundary>
+  <RecommendedProducts />
+</ErrorBoundary>
+```
+
+**예시 2: 결제 페이지**
+
+```jsx
+<ErrorBoundary>
+  <Payment>
+    <CardNumberInput />
+    <CVCInput />
+    <PasswordInput />
+    <SubmitButton />
+  </Payment>
+</ErrorBoundary>
+```
+
+---
+
+## Error Boundary 장단점
+
+### 장점
+
+- 애플리케이션 안전성 보장 및 UX 개선
+- 디버깅/로깅 지원
+- 선언적 에러 처리 가능
+
+### 단점
+
+- 모든 에러를 감지하지 못함 (이벤트 핸들러, 비동기, SSR)
+- 정상 UI로 복구하려면 Reset 함수 필요
+- 경계 설정이 모호할 수 있음
+- 클래스형 컴포넌트로만 작성 가능
+
+---
+
+## 핵심 인사이트
+
+### 1. 기능 단위로 경계 설정
+
+Error Boundary는 **"함께 고장나야 하는 단위"**를 기준으로 적용한다. 너무 상위에 두면 불필요하게 많은 UI가 무너지고, 너무 하위에 두면 시스템 일관성이 깨진다.
+
+### 2. 렌더링 라이프사이클 에러만 처리
+
+Error Boundary는 컴포넌트 렌더링 중 발생하는 에러만 catch한다. 이벤트 핸들러, 비동기 로직, SSR 에러는 별도의 try-catch 처리가 필요하다.
+
+### 3. Fault Tolerance 구현
+
+프론트엔드에서도 인프라/백엔드처럼 부분 장애에 대한 허용성을 설계해야 한다. 일부 기능의 오류가 전체 시스템을 무너뜨리지 않도록 방어해야 한다.
+
+---
+
+## 참고 자료
+
+- [[10분 테코톡] 퐁쥬의 Error Boundary, 그게 뭔데?](https://www.youtube.com/watch?v=Sxr1cK48THc)
+- React 공식 문서 - Error Boundaries
