@@ -1,0 +1,372 @@
+---
+title: "10월 8일"
+description: "n8n과 Ollama 통합으로 로컬 AI 워크플로우 구축하기"
+---
+
+## 오늘 배운 것 (TIL)
+
+n8n과 Ollama를 통합하여 자체 호스팅 AI 워크플로우를 구축하는 방법
+
+## 핵심 요약 (TL;DR)
+
+n8n(workflow automation)과 Ollama(로컬 LLM)를 연동하면 클라우드 의존 없이 자체 호스팅 AI 자동화 시스템을 구축할 수 있다. Docker 네트워크 설정과 포트 매핑(11434)이 핵심이며, Chat Ollama 노드를 통해 Function Calling도 지원한다.
+
+---
+
+## n8n과 Ollama란?
+
+### n8n (Workflow Automation Platform)
+
+- 400개 이상의 통합을 제공하는 워크플로우 자동화 도구
+- Fair-code 라이선스로 자체 호스팅 가능
+- 노코드/로우코드 방식으로 복잡한 워크플로우 구성 가능
+
+### Ollama (로컬 LLM 실행 도구)
+
+- LLaMA, Mistral, Gemma 등 오픈소스 LLM을 로컬에서 실행
+- REST API 제공으로 다른 애플리케이션과 쉽게 통합
+- GPU 가속 지원으로 빠른 추론 속도
+
+### 통합의 장점
+
+- **프라이버시**: 데이터가 외부로 나가지 않음
+- **비용 절감**: API 호출 비용 없음
+- **자유도**: 모델과 워크플로우 완전 커스터마이징
+- **오프라인**: 인터넷 없이도 동작
+
+---
+
+## 설치 및 설정
+
+### 1. Ollama 설치
+
+**Linux/macOS**
+
+```bash
+curl -fsSL https://ollama.com/install.sh | sh
+```
+
+**Docker 환경**
+
+```bash
+docker run -d \
+  -v ollama:/root/.ollama \
+  -p 11434:11434 \
+  --name ollama \
+  ollama/ollama
+```
+
+### 2. 핵심 설정 포인트
+
+**포트 매핑**: `-p 11434:11434`
+
+- Ollama의 기본 API 포트
+- 호스트에 노출해야 n8n이 접근 가능
+
+**볼륨 마운트**: `-v ollama:/root/.ollama`
+
+- 모델 데이터 영속성 보장
+- 컨테이너 재시작 시에도 모델 유지
+
+### 3. 모델 다운로드
+
+```bash
+ollama pull llama3.2
+ollama pull mistral
+```
+
+---
+
+## Docker 환경에서의 네트워크 설정
+
+### 상황별 연결 주소
+
+| n8n 환경 | Ollama 환경            | 연결 주소                                     |
+| -------- | ---------------------- | --------------------------------------------- |
+| 호스트   | 호스트                 | `http://localhost:11434`                      |
+| Docker   | 호스트                 | `http://host.docker.internal:11434` (Mac/Win) |
+| Docker   | Docker (같은 네트워크) | `http://ollama:11434`                         |
+| Docker   | Docker (다른 네트워크) | 호스트 IP 직접 사용                           |
+
+### 네트워크 격리의 중요성
+
+- Ollama를 외부에 노출하지 않기
+- n8n과 같은 내부 네트워크에 배치
+- 필요시 VPN/SSH 터널 사용
+
+---
+
+## n8n에서 Ollama 사용하기
+
+### Chat Ollama 노드 설정
+
+n8n에는 LangChain 기반 Chat Ollama 노드가 내장되어 있다.
+
+**주요 설정값:**
+
+- **Base URL**: Ollama API 엔드포인트
+- **Model**: 사용할 모델명 (예: `llama3.2`, `mistral`)
+- **Temperature**: 0-1 (낮을수록 일관적, 높을수록 창의적)
+
+### Function Calling 예시
+
+Ollama는 도구(Function) 호출을 지원한다:
+
+```json
+{
+  "model": "llama3.2",
+  "messages": [
+    {
+      "role": "user",
+      "content": "도쿄 날씨 알려줘"
+    }
+  ],
+  "tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "get_weather",
+        "description": "특정 도시의 날씨 조회",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "city": {
+              "type": "string",
+              "description": "날씨를 조회할 도시"
+            }
+          },
+          "required": ["city"]
+        }
+      }
+    }
+  ]
+}
+```
+
+**AI 응답:**
+
+```json
+{
+  "message": {
+    "role": "assistant",
+    "tool_calls": [
+      {
+        "function": {
+          "name": "get_weather",
+          "arguments": {
+            "city": "Tokyo"
+          }
+        }
+      }
+    ]
+  }
+}
+```
+
+---
+
+## 실전 워크플로우 패턴
+
+### 1. AI 챗봇 워크플로우
+
+```
+Webhook (사용자 메시지)
+  ↓
+Chat Ollama (AI 응답 생성)
+  ↓
+Response (결과 반환)
+```
+
+### 2. 자동 이메일 요약
+
+```
+이메일 트리거 (새 이메일 감지)
+  ↓
+Chat Ollama (내용 요약)
+  ↓
+Slack/Discord (요약 전송)
+```
+
+### 3. 문서 분석 파이프라인
+
+```
+파일 업로드 트리거
+  ↓
+텍스트 추출
+  ↓
+Chat Ollama (내용 분석)
+  ↓
+데이터베이스 저장
+```
+
+---
+
+## 워크플로우 관리 API
+
+### 워크플로우 조회
+
+```http
+GET https://<n8n-domain>/rest/workflows/<workflow_id>
+```
+
+### 활성화/비활성화
+
+```http
+POST https://<n8n-domain>/rest/workflows/<workflow_id>/activate
+POST https://<n8n-domain>/rest/workflows/<workflow_id>/deactivate
+```
+
+### 삭제
+
+```http
+DELETE https://<n8n-domain>/rest/workflows/<workflow_id>
+```
+
+---
+
+## 성능 최적화 전략
+
+### 1. 모델 선택 기준
+
+- **소형 작업**: `llama3.2:3b`, `phi3:mini` (빠른 응답)
+- **일반 작업**: `llama3.2:7b`, `mistral:7b` (균형)
+- **복잡한 작업**: `llama3.2:70b`, `mixtral:8x7b` (고품질)
+
+### 2. 워크플로우 최적화
+
+**Static Data 활용**
+
+```javascript
+const staticData = $getWorkflowStaticData("global");
+staticData.lastExecution = new Date().getTime();
+```
+
+**조건부 실행**
+
+- IF 노드로 불필요한 AI 호출 방지
+- 캐싱으로 중복 요청 제거
+
+**배치 처리**
+
+- 여러 요청을 모아서 한 번에 처리
+
+### 3. 메모리 관리
+
+- 양자화된 모델 사용 (Q4, Q5)
+- 동시 실행 모델 수 제한
+- Docker 메모리 제한 조정
+
+---
+
+## 문제 해결
+
+### 연결 오류
+
+**증상**: n8n에서 Ollama 연결 실패
+
+**확인 사항:**
+
+1. Ollama 서버 실행 확인
+   ```bash
+   curl http://localhost:11434/api/version
+   ```
+2. Docker 네트워크 설정 확인
+3. 방화벽 규칙 확인
+
+### 느린 응답 속도
+
+**원인:**
+
+- GPU 가속 비활성화
+- 모델 크기가 너무 큼
+
+**해결:**
+
+- 더 작은 모델 사용
+- GPU 드라이버 설치
+
+### 메모리 부족
+
+**해결:**
+
+- 양자화된 모델 사용
+- 모델 동시 로딩 수 제한
+- 메모리 할당량 증가
+
+---
+
+## 보안 고려사항
+
+### 1. API 키 관리
+
+- n8n Credentials 기능 활용
+- 환경 변수로 민감 정보 관리
+- Ollama 프록시를 통한 인증 추가
+
+### 2. 네트워크 격리
+
+- Ollama를 외부에 직접 노출하지 않기
+- 내부 네트워크에서만 접근 허용
+- 필요시 VPN 사용
+
+### 3. 데이터 프라이버시
+
+- 민감 데이터는 로컬에서만 처리
+- 워크플로우 실행 로그 주기적 정리
+- GDPR 등 규정 준수
+
+---
+
+## 모니터링 및 디버깅
+
+### n8n 에러 워크플로우
+
+에러 발생 시 자동 알림:
+
+```
+Error Trigger
+  ↓
+Slack 알림
+  - 워크플로우명
+  - 에러 내용
+  - 실행 URL
+```
+
+### Ollama 모니터링
+
+```bash
+# 실행 중인 모델 확인
+curl http://localhost:11434/api/ps
+
+# 컨테이너 로그
+docker logs ollama
+```
+
+### 워크플로우 메타데이터
+
+```javascript
+// 워크플로우 활성 상태
+const isActive = $workflow.active;
+
+// 실행 모드 (production/test)
+const mode = $execution.mode;
+```
+
+---
+
+## 핵심 인사이트
+
+### 1. Docker 네트워크가 핵심
+
+n8n과 Ollama를 통합할 때 가장 중요한 것은 네트워크 설정이다. 같은 Docker 네트워크에 배치하거나, 포트 매핑을 올바르게 설정해야 통신이 가능하다.
+
+### 2. 자체 호스팅의 Trade-off
+
+클라우드 API 대비 초기 설정이 복잡하고 하드웨어 투자가 필요하지만, 장기적으로는 비용 절감과 프라이버시 보호라는 큰 이점이 있다. 특히 민감한 데이터를 다루는 경우 필수적이다.
+
+---
+
+## 참고 자료
+
+- [n8n 공식 문서](https://docs.n8n.io/)
+- [Ollama GitHub](https://github.com/ollama/ollama)
