@@ -1,0 +1,188 @@
+---
+title: "10월 13일"
+description: "2025년 10월 13일에 기록한 내용"
+---
+
+## 오늘 배운 것 (TIL)
+
+React 19.2 업데이트 주요 기능 학습
+
+## 핵심 요약 (TL;DR)
+
+React 19.2의 4가지 핵심 기능(Activity 컴포넌트, useEffectEvent 훅, cacheSignal, Performance Track)과 Partial Prerendering을 통해 성능 최적화와 개발 경험 개선 방향 파악.
+
+## React 19.2 주요 업데이트
+
+### 1. Activity 컴포넌트
+
+**목적**: 컴포넌트를 DOM에서 제거하지 않고 상태를 유지하며 숨김 처리
+
+**주요 모드**:
+
+- `hidden`: 화면에서 숨기되 DOM 트리에 유지, 이펙트만 언마운트
+- `visible`: 화면에 노출하며 이펙트 정상 마운트
+
+**기존 방식의 문제점**:
+
+```jsx
+{
+  isVisible && <Page />;
+}
+```
+
+- 조건부 렌더링으로 DOM 트리에서 완전히 제거
+- 상태 변경 시 반복적인 마운트/언마운트로 성능 저하
+
+**개선된 방식**:
+
+```jsx
+<Activity mode={isVisible ? "visible" : "hidden"}>
+  <Page />
+</Activity>
+```
+
+**장점**:
+
+- 상태를 유지한 채 노출/비노출 제어
+- 뒤로가기 시 입력 필드 등의 상태 유지 가능
+- 렌더링 부담 감소
+
+---
+
+### 2. useEffectEvent 훅
+
+**목적**: 이펙트 로직과 이벤트 로직을 분리하여 불필요한 의존성 문제 해결
+
+**기존 문제점**:
+
+```jsx
+useEffect(() => {
+  connectToChatRoom(roomId, theme);
+}, [roomId, theme]); // theme 변경 시에도 재연결 발생
+```
+
+**해결 방법**:
+
+```jsx
+const onConnect = useEffectEvent(() => {
+  connectToChatRoom(roomId, theme);
+});
+
+useEffect(() => {
+  onConnect();
+}, [roomId]); // theme 의존성 제거
+```
+
+**사용 제약**:
+
+- 이펙트 내부에서만 사용 가능 (onClick 등 사용자 이벤트 핸들러 불가)
+- useEffect가 선언된 같은 컴포넌트에서만 사용
+
+**의의**: ESLint 경고를 억제하던 기존 패턴의 공식 해법 제공
+
+---
+
+### 3. cacheSignal
+
+**목적**: 서버 컴포넌트에서 캐시된 항목의 생명주기가 끝났을 때를 감지하여 리소스 정리
+
+**문제 상황**:
+
+- 사용자가 페이지 이탈 시에도 fetch 요청 계속 실행
+- 불필요한 네트워크 및 DB 리소스 낭비
+
+**해결 방법**:
+
+```jsx
+import { cache, cacheSignal } from "react";
+
+const dedupedFetch = cache(fetch);
+
+async function Component() {
+  await dedupedFetch(url, { signal: cacheSignal() });
+}
+```
+
+**효과**:
+
+- `cacheSignal()`이 캐시된 결과가 더 이상 필요하지 않을 때 신호 제공
+- 진행 중인 작업 중단(abort) 또는 리소스 정리 가능
+- 네트워크 및 DB 리소스 최적화
+
+**현재 상태**: 서버 컴포넌트에서만 사용 가능
+
+---
+
+### 4. Performance Track
+
+**목적**: Chrome DevTools에서 React 내부 동작 시각화
+
+**추가된 트랙**:
+
+- **Scheduler 트랙**: 작업 우선순위 확인
+- **Component 트랙**: 각 컴포넌트의 렌더링 및 이펙트 실행 시점 파악
+
+**활용 시점**:
+
+- 배포 후 성능 병목 구간 분석
+- React 내부 작업 우선순위 디버깅
+
+---
+
+## Partial Prerendering (부분 사전 렌더링)
+
+**개념**: SSR과 SSG의 장점을 결합한 하이브리드 렌더링 방식
+
+**동작 원리**:
+
+1. `prerender()` 함수로 정적 부분(`prelude`)과 동적 부분(`postponed`) 분리
+2. `savePostponedState()`로 동적 부분의 상태 저장
+3. 요청 시 `getPostponedState()`로 저장된 상태 불러와 이어서 렌더링
+
+**의의**:
+
+- React가 빌드-서버-클라이언트 전구간 통합 관리
+- 풀스택 프레임워크로의 진화
+
+---
+
+## 기타 주요 변경사항
+
+### useId 훅 프리픽스 변경
+
+- **목적**: XML 1.0 네이밍 규격 준수 및 View Transitions 지원
+- 19.0: `R:`
+- 19.1: `r:`
+- 19.2: `r_` (언더스코어 추가)
+
+### ESLint 플러그인 업데이트
+
+- v6으로 업데이트
+- React Compiler 기반 새로운 규칙 선택 활성화
+
+### SSR 개선
+
+- Suspense 동작 방식 개선
+- Node.js 환경 전용 함수 추가
+
+---
+
+## 학습 인사이트
+
+### 상태 관리 패러다임의 변화
+
+Activity 컴포넌트는 "제거"가 아닌 "휴면"이라는 개념을 도입했습니다. 기존에는 보이지 않는 컴포넌트를 DOM에서 완전히 제거하는 것이 일반적이었지만, 이는 상태 손실과 불필요한 재마운트 비용을 발생시켰습니다. Activity는 컴포넌트를 "잠재운다"는 발상으로 메모리는 유지하되 연산은 중단하여, SPA에서 페이지 전환 시 사용자 경험을 크게 개선할 수 있습니다.
+
+### 의존성 문제의 공식 해법
+
+useEffectEvent는 수년간 개발자들이 ESLint 경고를 억제하며 우회하던 문제의 공식 솔루션입니다. "이펙트를 실행하는 조건"과 "이펙트 내부에서 참조하는 값"을 분리함으로써, 안전성을 유지하면서도 불필요한 재실행을 방지합니다. 이는 React 팀이 실제 개발 현장의 페인 포인트를 경청하고 있다는 증거입니다.
+
+### 풀스택 프레임워크로의 진화
+
+cacheSignal과 Partial Prerendering은 React가 단순 UI 라이브러리를 넘어 서버-클라이언트 통합 솔루션으로 발전하고 있음을 보여줍니다. 특히 Partial Prerendering은 "무엇을 미리 렌더링하고, 무엇을 나중에 렌더링할지"를 개발자가 세밀하게 제어할 수 있게 하여, 성능과 유연성의 균형을 추구합니다.
+
+---
+
+## 참고 자료
+
+- [수코딩 - React 19.2 업데이트 영상](https://www.youtube.com/watch?v=wL4P3PSbawg)
