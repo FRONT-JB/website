@@ -113,7 +113,7 @@ function createTIL() {
 
   // 현재 월과 비교하여 경로 결정
   const currentMonth = today.getMonth() + 1; // 1-12
-  const isCurrentMonth = currentMonth === 9; // 현재 9월
+  const isCurrentMonth = currentMonth === parseInt(month, 10);
 
   let targetFolder;
   if (isCurrentMonth) {

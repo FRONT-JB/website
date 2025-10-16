@@ -1,0 +1,302 @@
+---
+title: "10월 17일"
+description: "2025년 10월 17일에 기록한 내용"
+---
+
+## 오늘 배운 것 (TIL)
+
+React Server Components의 cache 함수 학습
+
+## 핵심 요약 (TL;DR)
+
+Server Components에서 cache 함수를 통한 중복 데이터 요청 방지 및 per-request memoization 패턴 학습. Layout-Page 간 데이터 공유 문제를 props drilling 없이 해결하는 방법과 올바른 사용 패턴 이해.
+
+---
+
+## React cache 함수 완전 가이드
+
+### 핵심 문제
+
+여러 Server Components가 동일한 데이터를 로드할 때 각 컴포넌트마다 별도 fetch 발생 → 중복 요청으로 성능 저하
+
+```jsx
+// 문제: 3개 컴포넌트가 각각 1초씩 대기 = 총 3초
+async function Page() {
+  const user = await loadCurrentUser(); // 1초
+}
+async function HelloAgain() {
+  const user = await loadCurrentUser(); // 1초
+}
+async function Layout() {
+  const user = await loadCurrentUser(); // 1초
+}
+```
+
+---
+
+## cache 함수의 동작 원리
+
+### 기본 사용법
+
+```jsx
+import { cache } from 'react';
+
+const loadCurrentUser = cache(async () => {
+  console.log('Loading current user');
+  await new Promise(resolve => setTimeout(resolve, 1000));
+  return { id: 1, name: "Bob" };
+});
+
+// 여러 컴포넌트에서 호출해도 1초만 소요
+// 콘솔에 "Loading current user" 단 1번만 출력
+```
+
+**Memoization 동작**:
+- 첫 번째 호출: 실제 데이터 fetch 실행
+- 이후 호출: 캐시된 값 즉시 반환
+- 결과: 3초 → **1초**
+
+---
+
+## Props를 사용하지 않는 이유
+
+### Layout-Page 구조의 한계
+
+```jsx
+// Layout.js
+async function Layout({ children }) {
+  const user = await loadCurrentUser();
+
+  return (
+    <div>
+      <header>Hello {user.name}</header>
+      {children} {/* Page가 children으로 전달됨 */}
+    </div>
+  );
+}
+
+// Page.js - user를 props로 받을 방법 없음
+async function Page() {
+  const user = await loadCurrentUser(); // 불가피하게 다시 로드
+}
+```
+
+**Props의 문제점**:
+- Layout은 Page를 `children`으로 받아 props 전달 불가
+- 컴포넌트 간 거리가 멀면 props drilling 발생
+
+**cache의 해결책**:
+- 각 컴포넌트가 독립적으로 데이터 요청
+- 컴포넌트와 데이터 로직 co-location
+- 자유로운 리팩토링
+
+---
+
+## cache의 핵심 특성
+
+### 1. Per-request 캐시 (짧은 생명주기)
+
+```
+Request 1 → 새 캐시 생성 → 렌더링 → 캐시 폐기
+Request 2 → 새 캐시 생성 → 렌더링 → 캐시 폐기
+```
+
+**특징**:
+- 브라우저 새로고침마다 캐시 리셋
+- **캐시 생명주기 = 단일 렌더링 사이클**
+
+**장점**:
+- 요청 간 데이터 누수 방지
+- Invalidation 관리 불필요
+- 단순하고 예측 가능
+
+### 2. Server Components 전용
+
+```jsx
+// ❌ Client Component에서는 동작하지 않음
+'use client';
+const loadData = cache(fetchData);
+// cache가 fetchData를 그대로 반환 (memoization 없음)
+```
+
+**이유**:
+- 클라이언트 앱은 수 시간~수 일 실행
+- 긴 생명주기 캐시는 invalidation 등 복잡한 관리 필요
+- Server Components는 초 단위로 캐시 관리 단순
+
+### 3. 컴포넌트 외부에서 정의 (중요!)
+
+**❌ 잘못된 사용**:
+```jsx
+// 컴포넌트 내부 - 렌더링마다 새 캐시 함수 생성
+function Temperature({ cityData }) {
+  const getWeekReport = cache(calculateWeekReport); // 매번 새 캐시!
+  const report = getWeekReport(cityData); // 캐시 효과 없음
+}
+```
+
+**✅ 올바른 사용**:
+```jsx
+// getWeekReport.js - 별도 모듈
+import { cache } from 'react';
+export const getWeekReport = cache(calculateWeekReport);
+
+// Temperature.js
+import getWeekReport from './getWeekReport';
+function Temperature({ cityData }) {
+  const report = getWeekReport(cityData); // 동일한 캐시 공유
+}
+
+// Precipitation.js
+import getWeekReport from './getWeekReport';
+function Precipitation({ cityData }) {
+  const report = getWeekReport(cityData); // 캐시 히트!
+}
+```
+
+### 4. 인자 비교: Primitive vs Object
+
+**❌ 객체 직접 전달 - 캐시 미스**:
+```jsx
+const calculateNorm = cache((vector) => {
+  // vector의 값이 같아도 참조가 다르면 캐시 미스
+});
+
+function MapMarker(props) {
+  // props 객체는 매 렌더링마다 새로 생성됨
+  const length = calculateNorm(props); // 캐시 효과 없음
+}
+
+// 동일 값이지만 다른 객체 참조
+<MapMarker x={10} y={10} z={10} />
+<MapMarker x={10} y={10} z={10} />
+```
+
+**✅ 원시값 전달 또는 일관된 참조**:
+```jsx
+// 방법 1: 원시값으로 분해
+const calculateNorm = cache((x, y, z) => {
+  // 원시값 비교로 캐시 히트
+});
+const length = calculateNorm(props.x, props.y, props.z);
+
+// 방법 2: 동일한 객체 참조 유지
+const vector = [10, 10, 10];
+<MapMarker vector={vector} />
+<MapMarker vector={vector} /> // 동일 참조로 캐시 히트
+```
+
+### 5. Preloading 패턴
+
+```jsx
+const getUser = cache(async (id) => {
+  return await db.user.query(id);
+});
+
+function Page({ id }) {
+  // await 없이 호출 - fetch 시작만 하고 기다리지 않음
+  getUser(id);
+
+  // ... 다른 계산 작업 ...
+
+  return <Profile id={id} />;
+}
+
+async function Profile({ id }) {
+  // 이미 시작된 fetch의 결과를 기다림 (캐시 히트)
+  const user = await getUser(id);
+  return <div>{user.name}</div>;
+}
+```
+
+---
+
+## 실전 활용 패턴
+
+### 패턴 1: Layout-Page 간 데이터 공유
+
+```jsx
+// lib/user.js
+import { cache } from 'react';
+export const loadCurrentUser = cache(async () => {
+  return await db.users.getCurrent();
+});
+
+// Layout.js
+import { loadCurrentUser } from './lib/user';
+async function Layout({ children }) {
+  const user = await loadCurrentUser();
+  return (
+    <div>
+      <header>Hello {user.name}</header>
+      {children}
+    </div>
+  );
+}
+
+// Page.js
+import { loadCurrentUser } from './lib/user';
+async function Page() {
+  const user = await loadCurrentUser(); // 캐시 히트!
+  return <div>Profile: {user.name}</div>;
+}
+```
+
+### 패턴 2: 다중 컴포넌트 데이터 공유
+
+```jsx
+import { cache } from 'react';
+
+const getUserMetrics = cache(async (user) => {
+  return await calculateUserMetrics(user);
+});
+
+function Profile({ user }) {
+  const metrics = getUserMetrics(user);
+  return <div>{metrics.score}</div>;
+}
+
+function TeamReport({ users }) {
+  return users.map(user => {
+    const metrics = getUserMetrics(user); // 동일 user는 캐시 히트
+    return <div key={user.id}>{metrics.summary}</div>;
+  });
+}
+```
+
+---
+
+## 핵심 정리
+
+| 항목 | 설명 |
+|------|------|
+| **용도** | Server Components에서 중복 데이터 fetch 방지 |
+| **생명주기** | Per-request (렌더링 완료 시 폐기) |
+| **환경** | Server Components 전용 |
+| **정의 위치** | 컴포넌트 외부 (모듈 레벨) |
+| **인자 타입** | 원시값 권장, 객체는 참조 일관성 필요 |
+| **비교 대상** | useMemo (Client Component용, 컴포넌트 내부) |
+
+---
+
+## 학습 인사이트
+
+### "로컬에서 요청, 글로벌하게 최적화"
+
+React의 `cache`는 단순한 최적화 도구가 아니라 Server Components의 설계 철학을 보여줍니다. Props drilling을 강요하지 않고 각 컴포넌트가 자신의 데이터를 **선언적으로 요청**하되, 내부적으로는 **자동 중복 제거**를 통해 효율성을 보장합니다.
+
+### Per-request 캐시의 우아함
+
+"per-request 캐시"라는 짧은 생명주기 선택은 복잡한 invalidation 로직 없이도 안전하게 사용할 수 있게 합니다. 요청이 끝나면 캐시도 사라지기 때문에 stale data 걱정이 없으며, 이는 서버 환경의 특성을 완벽히 활용한 설계입니다.
+
+### 컴포넌트 독립성과 재사용성
+
+각 컴포넌트가 자신의 데이터 로딩 로직을 포함하면서도 성능 저하 없이 동작한다는 것은, 진정한 의미의 **컴포넌트 독립성**을 달성했다는 의미입니다. 이는 대규모 애플리케이션에서 컴포넌트를 자유롭게 이동하고 재사용할 수 있게 하는 핵심 기반이 됩니다.
+
+---
+
+## 참고 자료
+
+- [BuildUI - React's new cache function](https://www.youtube.com/watch?v=MxjCLqdk4G4)
+- [React 공식 문서 - cache](https://react.dev/reference/react/cache)
+
