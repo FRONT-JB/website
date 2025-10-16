@@ -1,5 +1,5 @@
 ---
-title: "10월 02일"
+title: "10월 2일"
 description: "NextAuth.js와 Zod를 활용한 타입 안전 인증 시스템 구축"
 ---
 
@@ -19,26 +19,26 @@ NextAuth.js v5의 JWT 콜백과 Zod 4.x의 런타임 검증을 결합하여 타�
 
 ```typescript
 // v5: auth() 헬퍼로 서버 컴포넌트에서 직접 세션 접근
-import NextAuth from 'next-auth';
+import NextAuth from "next-auth";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
     Credentials({
       credentials: {
         email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" }
+        password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
         // 백엔드 API 호출
         const response = await fetch(`${API_URL}/auth/login`, {
-          method: 'POST',
+          method: "POST",
           body: JSON.stringify(credentials),
         });
 
         if (!response.ok) return null;
         return await response.json();
-      }
-    })
+      },
+    }),
   ],
   callbacks: {
     async jwt({ token, account }) {
@@ -48,12 +48,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       // 세션에 토큰 추가
       session.accessToken = token.accessToken;
       return session;
-    }
-  }
+    },
+  },
 });
 ```
 
 **v5의 장점**:
+
 - `auth()` 함수로 서버 컴포넌트에서 직접 세션 접근 가능
 - API Route Handler 자동 생성
 - 미들웨어 통합 간소화
@@ -86,6 +87,7 @@ async jwt({ token, account }) {
 ```
 
 **사전 갱신의 이점**:
+
 - 사용자가 요청 중 토큰 만료를 경험하지 않음
 - Race condition 방지
 - 갱신 실패 시 재시도 여유 확보
@@ -100,12 +102,12 @@ async function refreshAccessToken(token: JWT, attempt = 0): Promise<JWT> {
 
   try {
     const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
-      method: 'POST',
+      method: "POST",
       body: JSON.stringify({ refreshToken: token.refreshToken }),
     });
 
     if (!response.ok) {
-      return { ...token, error: 'RefreshTokenError' };
+      return { ...token, error: "RefreshTokenError" };
     }
 
     const data = await response.json();
@@ -120,11 +122,11 @@ async function refreshAccessToken(token: JWT, attempt = 0): Promise<JWT> {
       const baseDelay = Math.pow(2, attempt) * 100;
       const jitter = Math.random() * 100;
 
-      await new Promise(resolve => setTimeout(resolve, baseDelay + jitter));
+      await new Promise((resolve) => setTimeout(resolve, baseDelay + jitter));
       return refreshAccessToken(token, attempt + 1);
     }
 
-    return { ...token, error: 'RefreshTokenExpired' };
+    return { ...token, error: "RefreshTokenExpired" };
   }
 }
 ```
@@ -137,19 +139,19 @@ async function refreshAccessToken(token: JWT, attempt = 0): Promise<JWT> {
 
 ```typescript
 // types/next-auth.d.ts
-declare module 'next-auth' {
+declare module "next-auth" {
   interface Session {
     accessToken: string;
     refreshToken: string;
     expiresAt: number;
-    error?: 'RefreshTokenExpired';
+    error?: "RefreshTokenExpired";
   }
 
   interface JWT {
     accessToken: string;
     refreshToken: string;
     expiresAt: number;
-    error?: 'RefreshTokenExpired';
+    error?: "RefreshTokenExpired";
   }
 }
 ```
@@ -167,11 +169,11 @@ declare module 'next-auth' {
 // Before
 z.string({
   required_error: "이메일을 입력하세요",
-  invalid_type_error: "문자열만 가능합니다"
-})
+  invalid_type_error: "문자열만 가능합니다",
+});
 
 // After
-z.string({ message: "이메일을 입력하세요" })
+z.string({ message: "이메일을 입력하세요" });
 
 // 에러 객체
 // Before: error.errors
@@ -231,8 +233,8 @@ export default function LoginPage() {
 // utils/zod-helpers.ts
 export function formatZodError(error: ZodError): string {
   return error.issues
-    .map(issue => `${issue.path.join('.')}: ${issue.message}`)
-    .join(', ');
+    .map((issue) => `${issue.path.join(".")}: ${issue.message}`)
+    .join(", ");
 }
 
 // 사용 예시
@@ -250,8 +252,8 @@ if (!result.success) {
 
 ```typescript
 // utils/api-client/index.ts
-import ky from 'ky';
-import { getSession } from 'next-auth/react';
+import ky from "ky";
+import { getSession } from "next-auth/react";
 
 export const apiClient = ky.create({
   prefixUrl: process.env.NEXT_PUBLIC_API_URL,
@@ -260,7 +262,7 @@ export const apiClient = ky.create({
       async (request) => {
         const session = await getSession();
         if (session?.accessToken) {
-          request.headers.set('Authorization', `Bearer ${session.accessToken}`);
+          request.headers.set("Authorization", `Bearer ${session.accessToken}`);
         }
       },
     ],
@@ -306,9 +308,9 @@ export default async function ProfilePage() {
 export const TOKEN_ERROR_CODES = [401, 403] as const;
 
 export const AUTH_ERROR_MESSAGES = {
-  INVALID_CREDENTIALS: '이메일 또는 비밀번호가 올바르지 않습니다',
-  TOKEN_EXPIRED: '세션이 만료되었습니다. 다시 로그인해주세요',
-  REFRESH_FAILED: '세션 갱신에 실패했습니다',
+  INVALID_CREDENTIALS: "이메일 또는 비밀번호가 올바르지 않습니다",
+  TOKEN_EXPIRED: "세션이 만료되었습니다. 다시 로그인해주세요",
+  REFRESH_FAILED: "세션 갱신에 실패했습니다",
 } as const;
 
 // 타입 가드

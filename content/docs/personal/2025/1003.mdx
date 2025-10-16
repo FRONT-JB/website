@@ -1,5 +1,5 @@
 ---
-title: "10월 03일"
+title: "10월 3일"
 description: "React 19 Concurrent Features와 Actions 패턴으로 비동기 UX 개선하기"
 ---
 
@@ -35,6 +35,7 @@ function AsyncSelect() {
 ```
 
 **문제점**:
+
 - 여러 셀렉트를 빠르게 클릭하면 먼저 완료된 요청이 로딩 상태를 덮어씀
 - Race condition 발생: 나중 요청이 먼저 완료되면 잘못된 상태 표시
 - 각 컴포넌트가 독립적으로 로딩 상태 관리 → 전체 UI 불일치
@@ -70,6 +71,7 @@ function ImprovedAsyncSelect() {
 ```
 
 **개선 사항**:
+
 - ✅ `isPending`이 모든 비동기 작업이 완료될 때까지 `true` 유지
 - ✅ 수동 로딩 상태 관리 제거
 - ✅ 여러 요청을 하나의 transition으로 배치 처리
@@ -99,6 +101,7 @@ function OptimisticSelect() {
 ```
 
 **동작 원리**:
+
 1. `setOptimisticSelected(items)` 호출 → UI 즉시 업데이트
 2. Transition이 진행되는 동안 낙관적 상태 유지
 3. Transition 완료 → 실제 `selected` 값으로 자동 롤백
@@ -130,6 +133,7 @@ function SearchableTalksList() {
 ```
 
 **효과**:
+
 - 입력 필드는 즉시 반응 (블로킹 없음)
 - 무거운 리스트 렌더링은 지연 처리
 - `isStale`로 검색 중 상태 표시 가능
@@ -352,13 +356,25 @@ function TalksGrid({ talks }) {
 }
 
 @keyframes slideUp {
-  from { transform: translateY(20px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
 @keyframes slideDown {
-  from { transform: translateY(0); opacity: 1; }
-  to { transform: translateY(-20px); opacity: 0; }
+  from {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
 }
 ```
 
@@ -479,7 +495,7 @@ View Transitions (시각적 피드백)
 ### 3. Next.js App Router는 기본적으로 Transition 기반
 
 ```typescript
-router.push('/path'); // 내부적으로 startTransition 사용
+router.push("/path"); // 내부적으로 startTransition 사용
 ```
 
 따라서 RouterSelect 같은 컴포넌트는 별도 설정 없이 transition 기반 애니메이션 지원.
