@@ -1,0 +1,423 @@
+---
+title: "10월 18일"
+description: "2025년 10월 18일에 기록한 내용"
+---
+
+## 오늘 배운 것 (TIL)
+
+Next.js 15 환경에서 외부 백엔드 API와 httpOnly/secure 쿠키를 사용한 인증 시스템 구현
+
+## 핵심 요약 (TL;DR)
+
+Next.js 15와 별도의 백엔드 API 서버 간 쿠키 기반 인증 시스템 구현 방법 학습. `credentials: 'include'`를 통한 자동 쿠키 전송, 액세스/리프레시 토큰 갱신 플로우, Server Actions와 Middleware에서의 쿠키 처리, Set-Cookie 헤더 파싱 등 프론트엔드-백엔드 분리 환경에서의 안전한 인증 구현 패턴 습득.
+
+---
+
+## Next.js 15 + 외부 백엔드 API 쿠키 인증 시스템
+
+### 아키텍처 개요
+
+```
+┌─────────────────┐          ┌──────────────────┐
+│   Next.js 15    │          │  Backend API     │
+│   (Frontend)    │◄────────►│                  │
+│                 │  Cookie  │  - Access Token  │
+│  - Server Comp  │          │  - Refresh Token │
+│  - Server Action│          │  (httpOnly)      │
+│  - Middleware   │          │                  │
+└─────────────────┘          └──────────────────┘
+```
+
+**핵심 개념**:
+
+- 백엔드가 Set-Cookie로 httpOnly 쿠키 발급
+- 브라우저가 자동으로 쿠키 저장 및 전송
+- Next.js는 `credentials: 'include'`로 쿠키 자동 포함
+- JavaScript에서 쿠키 직접 접근 불가 (보안)
+
+---
+
+## 1. 쿠키 속성 이해
+
+### 백엔드 응답 예시
+
+```http
+Set-Cookie: accessToken=eyJhbG...; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=900
+Set-Cookie: refreshToken=eyJhbG...; Path=/api/auth/refresh; HttpOnly; Secure; SameSite=Lax; Max-Age=604800
+```
+
+### 쿠키 속성 정리
+
+| 속성             | 설명                    | 보안 효과          |
+| ---------------- | ----------------------- | ------------------ |
+| **HttpOnly**     | JavaScript 접근 차단    | XSS 공격 방지      |
+| **Secure**       | HTTPS에서만 전송        | MITM 공격 방지     |
+| **SameSite=Lax** | 크로스 사이트 요청 제한 | CSRF 공격 방지     |
+| **Path**         | 쿠키 전송 경로 제한     | 불필요한 노출 방지 |
+| **Max-Age**      | 만료 시간 (초)          | 토큰 생명주기 관리 |
+
+**Path 분리 전략**:
+
+- `accessToken`: `Path=/` → 모든 API 요청에 포함
+- `refreshToken`: `Path=/api/auth/refresh` → 리프레시 엔드포인트에만 포함
+
+---
+
+## 2. API 클라이언트 구현 (핵심)
+
+### lib/api-client.ts
+
+```typescript
+export async function apiClient<T>(
+  endpoint: string,
+  options: FetchOptions = {},
+): Promise<T> {
+  const config: RequestInit = {
+    ...options,
+    // 🔑 핵심: credentials를 'include'로 설정
+    credentials: "include", // 쿠키 자동 전송
+    headers: {
+      "Content-Type": "application/json",
+      ...options.headers,
+    },
+  };
+
+  let response = await fetch(`${API_BASE_URL}${endpoint}`, config);
+
+  // 401 Unauthorized → 토큰 갱신 시도
+  if (response.status === 401 && requiresAuth) {
+    const refreshed = await refreshAccessToken();
+
+    if (refreshed) {
+      // 원래 요청 재시도
+      response = await fetch(`${API_BASE_URL}${endpoint}`, config);
+    } else {
+      window.location.href = "/login";
+      throw new Error("Authentication failed");
+    }
+  }
+
+  return response.json();
+}
+
+// 리프레시 토큰으로 액세스 토큰 갱신
+async function refreshAccessToken(): Promise<boolean> {
+  const response = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
+    method: "POST",
+    credentials: "include", // 리프레시 토큰 쿠키 자동 포함
+  });
+
+  return response.ok; // 성공 시 새 accessToken 쿠키 자동 저장
+}
+```
+
+**credentials: 'include' 동작**:
+
+1. **Same-Origin**: 자동으로 쿠키 포함 (기본 동작)
+2. **Cross-Origin**: 명시적으로 필요 (프론트엔드와 백엔드가 다른 도메인)
+3. 백엔드도 CORS에서 `credentials: true` 설정 필수
+
+---
+
+## 3. Server Action에서 쿠키 처리
+
+### app/actions/auth.ts
+
+```typescript
+"use server";
+
+import { cookies } from "next/headers";
+
+export async function loginAction(formData: FormData) {
+  const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+    method: "POST",
+    body: JSON.stringify({ email, password }),
+    credentials: "include",
+  });
+
+  // 🍪 Set-Cookie 헤더 파싱 및 Next.js 쿠키로 설정
+  const setCookieHeaders = response.headers.getSetCookie();
+
+  if (setCookieHeaders) {
+    const cookieStore = await cookies();
+
+    for (const setCookieHeader of setCookieHeaders) {
+      parseAndSetCookie(cookieStore, setCookieHeader);
+    }
+  }
+
+  redirect("/dashboard");
+}
+
+// Set-Cookie 헤더 파싱 함수
+function parseAndSetCookie(cookieStore, setCookieHeader) {
+  const [nameValue, ...attributes] = setCookieHeader.split(";");
+  const [name, value] = nameValue.split("=");
+
+  const options = {
+    httpOnly: attributes.includes("HttpOnly"),
+    secure: attributes.includes("Secure"),
+    sameSite: "lax",
+    path: "/",
+  };
+
+  // Max-Age, Path 등 파싱
+  attributes.forEach((attr) => {
+    if (attr.startsWith("max-age=")) {
+      options.maxAge = parseInt(attr.split("=")[1]);
+    }
+  });
+
+  cookieStore.set(name, value, options);
+}
+```
+
+**Server Action 쿠키 플로우**:
+
+1. **브라우저 → Next.js**: 자동 쿠키 전송
+2. **Next.js → Backend**: `Cookie` 헤더에 명시적 포함 필요
+3. **Backend → Next.js**: `Set-Cookie` 응답
+4. **Next.js → 브라우저**: `cookies().set()`으로 전달
+
+---
+
+## 4. Middleware에서 인증 체크
+
+### middleware.ts
+
+```typescript
+export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  // 공개 경로는 통과
+  if (publicPaths.includes(pathname)) {
+    return NextResponse.next();
+  }
+
+  // 액세스 토큰 확인
+  const accessToken = request.cookies.get("accessToken");
+
+  if (!accessToken) {
+    // 리프레시 시도
+    const refreshResult = await attemptTokenRefresh(request);
+
+    if (refreshResult) {
+      return refreshResult; // 새 쿠키 포함 응답
+    }
+
+    return NextResponse.redirect(new URL("/login", request.url));
+  }
+
+  return NextResponse.next();
+}
+
+// 리프레시 토큰으로 갱신
+async function attemptTokenRefresh(request: NextRequest) {
+  const refreshToken = request.cookies.get("refreshToken");
+
+  const response = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
+    method: "POST",
+    headers: {
+      Cookie: `refreshToken=${refreshToken.value}`, // 명시적 전달
+    },
+  });
+
+  if (response.ok) {
+    const setCookieHeaders = response.headers.getSetCookie();
+    const nextResponse = NextResponse.next();
+
+    // 새 쿠키를 응답에 추가
+    setCookieHeaders.forEach((header) => {
+      const [name, value] = header.split(";")[0].split("=");
+      nextResponse.cookies.set(name, value, {
+        httpOnly: true,
+        secure: true,
+        sameSite: "lax",
+      });
+    });
+
+    return nextResponse;
+  }
+
+  return null;
+}
+```
+
+**Middleware 전략**:
+
+- ✅ 간단한 쿠키 존재 여부만 체크
+- ⚠️ 복잡한 검증은 피하기 (Edge Runtime 제약)
+- ✅ 상세 검증은 Server Components에서 수행
+
+---
+
+## 5. 자동 토큰 갱신 Hook
+
+### hooks/useAuthRefresh.ts
+
+```typescript
+"use client";
+
+export function useAuthRefresh(intervalMinutes: number = 14) {
+  useEffect(() => {
+    async function refreshToken() {
+      const response = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
+        method: "POST",
+        credentials: "include", // 리프레시 토큰 자동 포함
+      });
+
+      if (!response.ok) {
+        window.location.href = "/login";
+      }
+    }
+
+    // 14분마다 갱신 (액세스 토큰 15분 만료 가정)
+    const interval = setInterval(refreshToken, intervalMinutes * 60 * 1000);
+
+    return () => clearInterval(interval);
+  }, [intervalMinutes]);
+}
+```
+
+**토큰 갱신 전략**:
+
+1. **주기적 갱신**: 토큰 만료 전 자동 갱신 (예: 14분마다)
+2. **401 에러 시 갱신**: API 요청 실패 시 즉시 재시도
+3. **권장**: 두 방법 조합 사용
+
+---
+
+## 6. 인증 플로우 다이어그램
+
+### 로그인 플로우
+
+```
+Browser → Next.js Server Action
+          ↓
+        Backend API
+          ↓
+        Set-Cookie: accessToken, refreshToken
+          ↓
+        Next.js → Browser
+        (쿠키 자동 저장)
+```
+
+### 토큰 만료 & 갱신 플로우
+
+```
+Browser → GET /api/users → Backend
+                           ↓
+                        401 Unauthorized
+                           ↓
+        POST /api/auth/refresh (refreshToken 쿠키 포함)
+                           ↓
+                        Set-Cookie: new accessToken
+                           ↓
+        GET /api/users (재시도)
+                           ↓
+                        Success
+```
+
+---
+
+## 7. 보안 체크리스트
+
+### 쿠키 설정
+
+- ✅ `httpOnly: true` - XSS 방어
+- ✅ `secure: true` - HTTPS 전용
+- ✅ `sameSite: 'lax'` - CSRF 방어
+- ✅ Path 분리 (accessToken: `/`, refreshToken: `/api/auth/refresh`)
+
+### 토큰 만료 시간
+
+- **Access Token**: 15분 ~ 1시간
+- **Refresh Token**: 7일 ~ 30일
+
+### CSRF 추가 방어
+
+```typescript
+// CSRF 토큰을 헤더에 포함
+const csrfToken = document.cookie
+  .split("; ")
+  .find((row) => row.startsWith("XSRF-TOKEN="))
+  ?.split("=")[1];
+
+fetch(url, {
+  headers: {
+    "X-XSRF-TOKEN": csrfToken,
+  },
+  credentials: "include",
+});
+```
+
+---
+
+## 핵심 정리
+
+### 클라이언트 사이드
+
+```typescript
+// ✅ credentials: 'include' 필수
+fetch("/api/users", { credentials: "include" });
+
+// ✅ httpOnly 쿠키는 JavaScript 접근 불가
+// document.cookie로 읽을 수 없음
+
+// ✅ 401 에러 시 자동 리프레시
+```
+
+### Server Actions
+
+```typescript
+// ✅ cookies() API로 쿠키 읽기
+const cookieStore = await cookies();
+
+// ✅ 백엔드로 요청 시 Cookie 헤더 포함
+headers: {
+  Cookie: cookieStore.toString();
+}
+
+// ✅ Set-Cookie 파싱 후 전달
+cookieStore.set(name, value, options);
+```
+
+### Middleware
+
+```typescript
+// ✅ 간단한 체크만 수행
+const token = request.cookies.get("accessToken");
+
+// ⚠️ DB 접근 불가 (Edge Runtime)
+
+// ✅ 리프레시 시 새 쿠키 전달
+response.cookies.set(name, value);
+```
+
+---
+
+## 학습 인사이트
+
+### credentials: 'include'의 중요성
+
+Cross-Origin 환경에서 쿠키를 자동으로 주고받으려면 반드시 `credentials: 'include'`가 필요합니다. 이는 단순한 옵션이 아니라 프론트엔드-백엔드 분리 아키텍처에서 쿠키 기반 인증을 가능하게 하는 핵심 메커니즘입니다.
+
+### httpOnly 쿠키의 보안성
+
+JavaScript에서 접근할 수 없는 httpOnly 쿠키는 XSS 공격으로부터 토큰을 보호합니다. 하지만 이로 인해 Server Actions와 Middleware에서 쿠키를 명시적으로 헤더에 포함시켜야 하는 복잡성이 생깁니다. 보안과 편의성 사이의 트레이드오프를 이해하는 것이 중요합니다.
+
+### Server Actions의 프록시 역할
+
+Server Actions는 단순히 서버에서 실행되는 함수가 아니라, 브라우저와 백엔드 API 사이에서 쿠키를 안전하게 전달하는 프록시 역할을 합니다. `Set-Cookie` 헤더를 파싱하여 Next.js 쿠키 스토어에 설정하는 과정은 클라이언트와 서버 간 쿠키 동기화의 핵심입니다.
+
+### 토큰 갱신의 이중 전략
+
+주기적 갱신과 401 에러 시 갱신을 함께 사용하면, 사용자 경험을 해치지 않으면서도 토큰을 항상 최신 상태로 유지할 수 있습니다. 이는 "예방적 갱신 + 반응적 갱신"의 조합으로, 실전 프로덕션 환경에서 권장되는 패턴입니다.
+
+---
+
+## 참고 자료
+
+- [MDN - Fetch API: credentials](https://developer.mozilla.org/en-US/docs/Web/API/fetch#credentials)
+- [Next.js 공식 문서 - cookies](https://nextjs.org/docs/app/api-reference/functions/cookies)
+- [OWASP - Session Management Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html)
