@@ -23,7 +23,7 @@ export default function Page() {
         <div className="flex flex-row justify-center gap-2.5 max-sm:flex-col max-sm:items-stretch">
           <Link
             href="/blog/tags"
-            className={cn(buttonVariants({ color: "primary" }))}
+            className={cn(buttonVariants({ color: "primary" }), "gap-1")}
           >
             <EyeIcon className="size-4" />
             태그 모아보기
