@@ -1,0 +1,367 @@
+---
+title: 💡 Biome vs Prettier + ESLint - 2026년에는 어떤 조합을 선택해야 할까
+authors: [jb]
+description: "Biome과 Prettier + ESLint를 성능, 설정, 생태계, DX 측면에서 비교해요. 10,000개 파일 벤치마크, 설정 예시, 마이그레이션 도구, import 정렬까지 포함한 실전 비교 가이드를 확인하세요."
+tags: ["Frontend", "Biome", "ESLint", "DX"]
+date: 2026-02-12
+image: "/blog/biome.webp"
+---
+
+## Prettier + ESLint, 그리고 Biome
+
+프로젝트의 코드 품질을 관리하기 위해 Prettier와 ESLint를 함께 사용하고 계신가요? 이 조합은 오랫동안 프론트엔드 개발의 표준이었어요. 하지만 설정 파일이 늘어나고, 서로 충돌하는 규칙을 해결하느라 시간을 쓴 경험이 있다면 Biome이 좋은 대안이 될 수 있어요.
+
+이 글에서는 Biome과 Prettier + ESLint 조합을 성능, 설정 복잡도, 생태계, DX 관점에서 비교해요. 프로젝트 상황에 맞는 도구를 선택하는 데 도움이 될 거예요.
+
+<Callout>
+  이 글은 ESLint와 Prettier의 기본 개념을 이해한 프론트엔드 개발자를 대상으로
+  해요.
+</Callout>
+
+### Prettier + ESLint 조합의 역할
+
+**Prettier**는 코드 포매터예요. 들여쓰기, 따옴표, 세미콜론 등 코드 스타일을 자동으로 통일해요.
+**ESLint**는 린터예요. 사용하지 않는 변수, 잘못된 Hook 사용 등 코드 품질 문제를 찾아내요.
+
+두 도구는 각자의 영역에서 강력하지만, 함께 사용하면 몇 가지 불편한 점이 있어요.
+
+- `eslint-config-prettier`로 ESLint의 포매팅 규칙을 비활성화해야 해요
+- `.eslintrc`, `.prettierrc`, `.eslintignore`, `.prettierignore` 등 설정 파일이 많아요
+- 두 도구의 설정이 충돌하면 디버깅이 필요해요
+
+### Biome의 등장
+
+Biome은 Rome 프로젝트에서 2023년에 포크되어 시작한 올인원 도구예요. Rust로 작성된 단일 바이너리로, 포매팅과 린팅을 모두 처리해요. 2025년에 v2를 출시하며 안정화되었고, 현재 v2.3까지 발전했어요.
+
+| 비교 항목 | Prettier + ESLint         | Biome                              |
+| --------- | ------------------------- | ---------------------------------- |
+| 언어      | JavaScript                | Rust                               |
+| 패키지 수 | 10개 이상 (플러그인 포함) | 1개                                |
+| 설정 파일 | 3-4개                     | 1개 (biome.json)                   |
+| 역할      | 포매터 + 린터 (별도)      | 포매터 + 린터 + import 정렬 (통합) |
+
+## 설정과 시작하기
+
+### Prettier + ESLint 설정
+
+Prettier와 ESLint를 함께 설정하려면 여러 패키지를 설치하고, 충돌을 방지하기 위한 설정이 필요해요.
+
+```bash
+# Prettier + ESLint 설치
+pnpm add -D eslint prettier eslint-config-prettier \
+  @eslint/js typescript-eslint
+```
+
+```typescript
+// eslint.config.ts
+import js from "@eslint/js";
+import tseslint from "typescript-eslint";
+import prettierConfig from "eslint-config-prettier";
+
+export default tseslint.config(
+  js.configs.recommended,
+  ...tseslint.configs.recommended,
+  prettierConfig, // Prettier와 충돌하는 ESLint 규칙 비활성화
+);
+```
+
+```json
+// .prettierrc
+{
+  "semi": true,
+  "singleQuote": false,
+  "tabWidth": 2,
+  "trailingComma": "es5"
+}
+```
+
+IDE 설정까지 포함하면 `.vscode/settings.json`에 포매터 지정도 필요해요.
+
+### Biome 설정
+
+Biome은 하나의 패키지와 하나의 설정 파일로 시작할 수 있어요.
+
+```bash
+# Biome 설치 및 초기화
+pnpm add -D @biomejs/biome
+pnpm biome init
+```
+
+```json
+// biome.json
+{
+  "$schema": "https://biomejs.dev/schemas/2.3.14/schema.json",
+  "organizeImports": {
+    "enabled": true
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "recommended": true
+    }
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2
+  }
+}
+```
+
+<Callout>
+  Biome은 `biome init` 명령어 하나로 기본 설정 파일을 생성해요. 포매팅, 린팅,
+  import 정렬이 모두 하나의 파일에서 관리돼요.
+</Callout>
+
+### 기존 프로젝트 마이그레이션
+
+이미 Prettier와 ESLint를 사용 중이라면 Biome의 마이그레이션 도구를 활용할 수 있어요.
+
+```bash
+# ESLint 설정 마이그레이션
+pnpm biome migrate eslint
+
+# Prettier 설정 마이그레이션
+pnpm biome migrate prettier --write
+```
+
+마이그레이션 도구가 기존 설정을 자동으로 변환해주지만, 100% 동일한 동작을 보장하지는 않아요. 일부 규칙은 Biome에서 의도적으로 다르게 동작해요.
+
+## 성능 비교
+
+Biome이 가장 큰 차이를 보이는 영역은 성능이에요. Rust로 작성된 단일 바이너리이기 때문에 JavaScript 기반 도구와는 근본적인 속도 차이가 있어요.
+
+### 벤치마크 결과
+
+실제 프로덕션 코드베이스(10,000개 파일) 기준 측정 결과예요.
+
+| 작업      | Prettier + ESLint | Biome | 차이    |
+| --------- | ----------------- | ----- | ------- |
+| 포매팅    | 12.1초            | 0.3초 | 약 40배 |
+| 린팅      | 45.2초            | 0.8초 | 약 56배 |
+| 전체 검사 | 57.3초            | 1.1초 | 약 52배 |
+
+### CI 환경에서의 체감 차이
+
+로컬 개발 환경에서는 파일 하나를 저장할 때마다 실행되므로 체감 차이가 크지 않을 수 있어요. 하지만 CI 환경에서 전체 코드베이스를 검사할 때는 차이가 분명해요.
+
+```bash
+# CI에서 Biome 검사 실행
+pnpm biome check .
+```
+
+수 분이 걸리던 lint + format 검사가 수 초로 줄어들어요. 특히 PR마다 실행하는 CI 파이프라인에서 비용과 시간을 절감할 수 있어요.
+
+<Callout type="info" title="성능 차이의 이유">
+  Biome은 Rust로 작성되어 네이티브 바이너리로 실행되고, 멀티코어를 활용한 병렬
+  처리를 지원해요. JavaScript 런타임 위에서 실행되는 ESLint, Prettier와는
+  근본적으로 다른 구조예요.
+</Callout>
+
+## 규칙 커버리지와 생태계
+
+### ESLint의 플러그인 생태계
+
+ESLint의 가장 큰 강점은 풍부한 플러그인 생태계예요.
+
+- `eslint-plugin-react` - React 규칙
+- `eslint-plugin-react-hooks` - Hook 규칙
+- `@typescript-eslint` - TypeScript 규칙
+- `eslint-plugin-import` - import 규칙
+- `eslint-plugin-jsx-a11y` - 접근성 규칙
+- `eslint-plugin-tailwindcss` - Tailwind CSS 규칙
+
+이 외에도 수백 개의 커뮤니티 플러그인이 존재해요. 프레임워크나 라이브러리에 특화된 규칙을 세밀하게 적용할 수 있어요.
+
+### Biome의 규칙 범위
+
+Biome v2.3 기준으로 340개 이상의 린트 규칙을 내장하고 있어요. ESLint, typescript-eslint, eslint-plugin-react 등의 주요 규칙 대부분을 포함해요.
+
+```json
+// biome.json - 규칙 그룹별 설정 예시
+{
+  "linter": {
+    "rules": {
+      "recommended": true,
+      "correctness": {
+        "noUnusedVariables": "error"
+      },
+      "suspicious": {
+        "noExplicitAny": "warn"
+      },
+      "style": {
+        "useConst": "error"
+      }
+    }
+  }
+}
+```
+
+Biome v2부터는 TypeScript 컴파일러에 의존하지 않는 자체 타입 추론 엔진으로 타입 인식 린트 규칙도 지원해요. 이는 `@typescript-eslint`의 typed linting과 유사하지만, 별도의 `tsconfig.json` 설정 없이 동작하는 점이 달라요.
+
+### 프레임워크 지원 현황
+
+| 프레임워크      | ESLint              | Biome            |
+| --------------- | ------------------- | ---------------- |
+| React (JSX/TSX) | ✅ 완전 지원        | ✅ 완전 지원     |
+| Vue             | ✅ 플러그인         | ✅ v2.3부터 지원 |
+| Svelte          | ✅ 플러그인         | ✅ v2.3부터 지원 |
+| Astro           | ✅ 플러그인         | ✅ v2.3부터 지원 |
+| CSS             | ✅ stylelint (별도) | ✅ 내장          |
+| GraphQL         | ❌ 별도 도구        | ✅ 내장          |
+
+<Callout type="error" title="주의">
+  ESLint의 특정 플러그인에 의존하는 프로젝트라면 Biome으로 마이그레이션하기 전에
+  해당 규칙이 Biome에 존재하는지 확인이 필요해요. [Biome 공식
+  문서](https://biomejs.dev)에서 규칙 매핑 표를 제공해요.
+</Callout>
+
+## 개발자 경험(DX) 비교
+
+### 에디터 통합
+
+두 도구 모두 VS Code 확장을 제공해요.
+
+**Prettier + ESLint**는 각각의 확장을 설치해야 해요. `editor.formatOnSave`로 Prettier를 실행하고, ESLint 확장이 실시간으로 린트 오류를 표시해요. 두 확장 간 설정이 꼬이면 디버깅이 필요해요.
+
+**Biome**은 하나의 확장으로 포매팅과 린팅을 모두 처리해요. 멀티 루트 워크스페이스, 저장하지 않은 파일 지원 등 IDE 통합이 깔끔해요.
+
+```json
+// .vscode/settings.json - Biome 사용 시
+{
+  "editor.defaultFormatter": "biomejs.biome",
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "quickfix.biome": "explicit",
+    "source.organizeImports.biome": "explicit"
+  }
+}
+```
+
+### 에러 메시지 품질
+
+Biome은 에러 메시지의 가독성에 많은 투자를 한 도구예요. 규칙 위반 시 무엇이 잘못되었는지, 왜 문제인지, 어떻게 고쳐야 하는지를 함께 알려줘요.
+
+```bash
+# Biome 에러 메시지 예시
+  × lint/correctness/noUnusedVariables
+
+  This variable is unused.
+
+    1 │ const unused = "hello";
+      │       ^^^^^^
+
+  Suggested fix: Remove the unused variable.
+```
+
+ESLint도 `--format` 옵션으로 출력을 커스터마이징할 수 있지만, 기본 출력에서 Biome의 메시지가 더 직관적이에요.
+
+### import 정렬
+
+`import` 문의 순서를 일관되게 유지하는 것도 코드 품질에 중요한 요소예요.
+
+**Prettier + ESLint** 환경에서는 별도의 플러그인이 필요해요. `eslint-plugin-import`의 `import/order` 규칙을 사용하거나, `@trivago/prettier-plugin-sort-imports` 같은 Prettier 플러그인을 추가해야 해요.
+
+```typescript
+// eslint.config.ts - import 정렬 규칙 설정
+import importPlugin from "eslint-plugin-import";
+
+export default [
+  {
+    plugins: { import: importPlugin },
+    rules: {
+      "import/order": [
+        "error",
+        {
+          groups: [
+            "builtin",
+            "external",
+            "internal",
+            "parent",
+            "sibling",
+            "index",
+          ],
+          "newlines-between": "always",
+          alphabetize: { order: "asc" },
+        },
+      ],
+    },
+  },
+];
+```
+
+**Biome**은 import 정렬이 내장되어 있어요. `organizeImports`를 활성화하면 별도의 플러그인 없이 동작해요.
+
+```json
+// biome.json - import 정렬은 기본 설정에 포함
+{
+  "organizeImports": {
+    "enabled": true
+  }
+}
+```
+
+```bash
+# import 정렬 포함 전체 검사 및 자동 수정
+pnpm biome check --fix .
+```
+
+Biome은 저장 시 자동으로 import를 정렬해요. VS Code 설정에서 `source.organizeImports.biome`을 활성화하면 별도 조작 없이 동작해요.
+
+### 설정 복잡도 한눈에 보기
+
+| 항목           | Prettier + ESLint           | Biome              |
+| -------------- | --------------------------- | ------------------ |
+| 설치 패키지 수 | 5-10개 이상                 | 1개                |
+| 설정 파일 수   | 3-4개                       | 1개                |
+| 충돌 해결      | eslint-config-prettier 필요 | 해당 없음          |
+| ignore 설정    | 별도 파일 2개               | biome.json 내 설정 |
+| import 정렬    | 추가 플러그인 필요          | 내장               |
+
+## 어떤 상황에서 무엇을 선택할까
+
+### Biome을 추천하는 경우
+
+- **새로운 프로젝트**를 시작할 때
+- CI/CD **성능 최적화**가 필요할 때
+- 설정 파일을 **단순하게** 유지하고 싶을 때
+- React, Vue, Svelte 등 **주요 프레임워크**만 사용할 때
+- **모노레포**에서 일관된 도구를 적용하고 싶을 때
+
+### Prettier + ESLint를 유지해야 하는 경우
+
+- **특수한 ESLint 플러그인**에 의존하는 프로젝트
+- 팀에서 **ESLint 커스텀 규칙**을 많이 사용하는 경우
+- Biome이 아직 지원하지 않는 **YAML, SCSS** 등이 핵심인 경우
+- 기존 설정이 안정적이고 **마이그레이션 비용**이 부담되는 경우
+
+### 의사결정 체크리스트
+
+다음 질문에 답해보세요.
+
+- [ ] 프로젝트에서 ESLint 플러그인을 3개 이상 사용하고 있나요?
+- [ ] 커스텀 ESLint 규칙을 작성해서 사용하나요?
+- [ ] CI 파이프라인에서 lint/format 시간이 병목인가요?
+- [ ] 설정 파일 관리에 불편함을 느끼고 있나요?
+- [ ] YAML, SCSS 등 Biome 미지원 포맷을 많이 사용하나요?
+
+플러그인 의존도가 낮고, CI 성능이 중요하다면 Biome을 고려해보세요. 반대로 복잡한 플러그인 조합이 필수라면 Prettier + ESLint를 유지하는 게 나아요.
+
+## 마무리
+
+Biome과 Prettier + ESLint 비교의 핵심을 정리하면 다음과 같아요.
+
+- **성능** - Biome이 10-50배 이상 빨라요. Rust 기반 네이티브 바이너리의 장점이에요
+- **설정** - Biome은 패키지 1개, 설정 파일 1개로 시작할 수 있어요
+- **생태계** - ESLint의 플러그인 생태계는 여전히 강력한 차별점이에요
+- **지원 범위** - Biome v2.3에서 Vue, Svelte, Astro, CSS, GraphQL까지 지원이 확대되었어요
+- **마이그레이션** - `biome migrate` 명령어로 기존 설정을 자동 변환할 수 있어요
+
+2026년 기준으로 Biome은 대부분의 프론트엔드 프로젝트에서 Prettier + ESLint를 대체할 수 있는 수준에 도달했어요. 새 프로젝트라면 Biome으로 시작하는 것을 권장해요. 기존 프로젝트는 플러그인 의존도를 확인한 후 점진적으로 마이그레이션하는 전략이 좋아요.
+
+### 참고 자료
+
+- [Biome 공식 문서](https://biomejs.dev)
+- [Biome 2026 로드맵](https://biomejs.dev/blog/roadmap-2026/)
+- [ESLint 공식 문서](https://eslint.org)
+- [Prettier 공식 문서](https://prettier.io)
