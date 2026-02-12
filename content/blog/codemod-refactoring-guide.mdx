@@ -1,0 +1,337 @@
+---
+title: 🛠️ Codemod 실전 가이드 - jscodeshift로 수백 개 파일 리팩토링 자동화하기
+authors: [jb]
+description: "jscodeshift로 codemod를 작성하고 대규모 코드베이스를 안전하게 리팩토링하는 방법을 알아보세요. AST 기초부터 console.log 제거, API 마이그레이션, 테스트 작성까지 실전 예제와 함께 단계별로 다뤄요."
+tags: ["Frontend", "Codemod", "리팩토링", "DX"]
+date: 2026-02-13
+image: "/blog/codemod.webp"
+---
+
+## Codemod가 필요한 순간
+
+프로젝트에서 deprecated된 API를 새 API로 바꿔야 하는 상황을 겪어본 적 있나요? 파일이 10개라면 수작업으로 할 수 있어요. 하지만 100개, 1,000개 파일이라면 이야기가 달라져요.
+
+이 글에서는 **jscodeshift**를 사용해 codemod를 작성하고, 대규모 코드베이스를 안전하게 리팩토링하는 방법을 단계별로 다뤄요. AST 기초부터 실전 API 마이그레이션, 테스트까지 다루고 있어요.
+
+<Callout>
+  이 글은 JavaScript/TypeScript 기본 문법을 이해하고, 프로젝트에서 반복적인 코드
+  변경 작업을 자동화하고 싶은 개발자를 대상으로 해요.
+</Callout>
+
+### 정규식의 한계
+
+간단한 치환은 `sed`나 IDE의 찾기-바꾸기로 충분해요. 하지만 다음과 같은 경우에는 정규식만으로 해결하기 어려워요.
+
+- 함수 호출의 인자 순서를 바꿔야 할 때
+- 특정 조건에서만 import를 변경해야 할 때
+- 변수 스코프를 고려한 이름 변경이 필요할 때
+- JSX 속성을 추가하거나 제거해야 할 때
+
+이런 작업에는 코드의 **구조적 의미**를 이해하는 도구가 필요해요. 그게 바로 codemod예요.
+
+## AST와 jscodeshift 기초
+
+### AST란
+
+AST(Abstract Syntax Tree)는 코드를 트리 구조로 표현한 것이에요. 다음 코드를 예로 들어볼게요.
+
+```typescript
+const greeting = "hello";
+```
+
+이 한 줄은 AST에서 `VariableDeclaration` → `VariableDeclarator` → `StringLiteral` 같은 노드 트리로 변환돼요. codemod는 이 트리를 탐색하고 수정한 뒤 다시 코드로 변환하는 방식으로 동작해요.
+
+<Callout type="info" title="AST Explorer">
+  [AST Explorer](https://astexplorer.net/)에서 코드를 붙여넣으면 AST 구조를
+  시각적으로 확인할 수 있어요. Transform 옵션에서 jscodeshift를 선택하면 변환
+  결과도 실시간으로 확인할 수 있어요.
+</Callout>
+
+### jscodeshift 설치
+
+jscodeshift는 Facebook이 만든 codemod 실행 도구예요. 내부적으로 recast를 사용해 원본 코드의 포매팅을 최대한 보존해요.
+
+```bash
+# jscodeshift 설치
+pnpm add -D jscodeshift @types/jscodeshift
+```
+
+### transform 함수의 기본 구조
+
+모든 codemod는 하나의 transform 함수로 이루어져 있어요.
+
+```typescript
+// transforms/my-transform.ts
+import type { API, FileInfo } from "jscodeshift";
+
+export default function transformer(fileInfo: FileInfo, api: API) {
+  const j = api.jscodeshift;
+  const root = j(fileInfo.source);
+
+  // AST 변환 로직 작성
+
+  return root.toSource();
+}
+```
+
+세 가지 핵심 요소가 있어요.
+
+- `fileInfo.source` - 변환 대상 파일의 소스 코드 문자열
+- `api.jscodeshift` (보통 `j`로 축약) - AST 노드를 찾고 수정하는 API
+- `root.toSource()` - 수정된 AST를 다시 소스 코드 문자열로 변환
+
+## 첫 번째 Codemod 작성하기
+
+간단한 예제로 시작해볼게요. 프로덕션 코드에서 `console.log`를 제거하는 codemod를 만들어 봐요.
+
+### console.log 제거 codemod
+
+```typescript
+// transforms/remove-console-log.ts
+import type { API, FileInfo } from "jscodeshift";
+
+export default function transformer(fileInfo: FileInfo, api: API) {
+  const j = api.jscodeshift;
+  const root = j(fileInfo.source);
+
+  // console.log 호출을 찾아서 제거
+  root
+    .find(j.ExpressionStatement, {
+      expression: {
+        type: "CallExpression",
+        callee: {
+          object: { name: "console" },
+          property: { name: "log" },
+        },
+      },
+    })
+    .remove();
+
+  return root.toSource();
+}
+```
+
+이 코드의 동작 흐름을 살펴보면 다음과 같아요.
+
+1. `j(fileInfo.source)`로 소스 코드를 AST로 파싱해요
+2. `.find()`로 `console.log()` 호출에 해당하는 노드를 찾아요
+3. `.remove()`로 해당 노드를 제거해요
+4. `.toSource()`로 수정된 AST를 코드로 변환해요
+
+### 실행과 결과 확인
+
+`--dry`와 `--print` 옵션으로 실제 파일을 수정하지 않고 결과를 미리 확인할 수 있어요.
+
+```bash
+# 변경 사항 미리 확인 (파일 수정 없음)
+npx jscodeshift -t transforms/remove-console-log.ts src/ --dry --print
+
+# 실제 실행
+npx jscodeshift -t transforms/remove-console-log.ts src/ --parser=tsx
+```
+
+<Callout type="error" title="주의">
+  codemod를 실행하기 전에 반드시 Git에 커밋하세요. `--dry --print`로 결과를
+  확인한 뒤, 실제 실행 후에는 `git diff`로 변경 사항을 검토하는 것이 안전해요.
+</Callout>
+
+## 실전 Codemod - API 마이그레이션
+
+실무에서 가장 많이 사용하는 codemod 패턴은 API 마이그레이션이에요. deprecated된 함수를 새 함수로 바꾸는 예제를 만들어볼게요.
+
+### 시나리오
+
+`fetchData(url, callback)` 형태의 콜백 기반 API를 `fetchData(url, options)` 형태의 옵션 객체 패턴으로 마이그레이션한다고 가정해요.
+
+**변환 전**
+
+```typescript
+// 기존 코드
+fetchData("/api/users", (err, data) => {
+  if (err) handleError(err);
+  setUsers(data);
+});
+```
+
+**변환 후**
+
+```typescript
+// 변환된 코드
+fetchData("/api/users", {
+  onSuccess: (data) => {
+    setUsers(data);
+  },
+  onError: (err) => {
+    handleError(err);
+  },
+});
+```
+
+### 마이그레이션 codemod
+
+```typescript
+// transforms/migrate-fetch-data.ts
+import type { API, FileInfo } from "jscodeshift";
+
+export default function transformer(fileInfo: FileInfo, api: API) {
+  const j = api.jscodeshift;
+  const root = j(fileInfo.source);
+
+  root
+    .find(j.CallExpression, {
+      callee: { name: "fetchData" },
+    })
+    .filter((path) => {
+      // 두 번째 인자가 화살표 함수인 경우만 변환
+      const args = path.node.arguments;
+      return args.length === 2 && args[1].type === "ArrowFunctionExpression";
+    })
+    .replaceWith((path) => {
+      const [urlArg, callbackArg] = path.node.arguments;
+
+      if (callbackArg.type !== "ArrowFunctionExpression") return path.node;
+      const params = callbackArg.params;
+      const errParam = params[0];
+      const dataParam = params[1];
+
+      // 콜백 본문에서 에러 처리와 성공 로직 분리
+      const body = callbackArg.body;
+      if (body.type !== "BlockStatement") return path.node;
+
+      const statements = body.body;
+      const errorStatements = statements.filter(
+        (stmt) =>
+          j(stmt).toSource().includes(j(errParam).toSource()) &&
+          !j(stmt).toSource().includes(j(dataParam).toSource()),
+      );
+      const successStatements = statements.filter(
+        (stmt) => !errorStatements.includes(stmt),
+      );
+
+      // 새로운 옵션 객체 생성
+      const optionsObj = j.objectExpression([
+        j.property(
+          "init",
+          j.identifier("onSuccess"),
+          j.arrowFunctionExpression(
+            dataParam ? [dataParam] : [],
+            j.blockStatement(successStatements),
+          ),
+        ),
+        j.property(
+          "init",
+          j.identifier("onError"),
+          j.arrowFunctionExpression(
+            errParam ? [errParam] : [],
+            j.blockStatement(errorStatements),
+          ),
+        ),
+      ]);
+
+      return j.callExpression(j.identifier("fetchData"), [urlArg, optionsObj]);
+    });
+
+  return root.toSource();
+}
+```
+
+이 codemod는 `fetchData`의 두 번째 인자가 콜백 함수인 경우를 찾아 옵션 객체 패턴으로 변환해요. `.filter()`로 변환 대상을 정확히 좁히고, `.replaceWith()`로 새로운 AST 노드를 생성하는 패턴이에요.
+
+<Callout>
+  복잡한 codemod를 작성할 때는 [AST Explorer](https://astexplorer.net/)에서 변환
+  전/후 코드의 AST 구조를 비교하면서 작업하는 것이 효율적이에요.
+</Callout>
+
+## Codemod 테스트와 디버깅
+
+codemod는 코드를 자동으로 변경하는 도구이기 때문에, 테스트 없이 실행하면 예상치 못한 결과가 나올 수 있어요.
+
+### jscodeshift 테스트 유틸리티
+
+jscodeshift는 Jest 기반 테스트 유틸리티를 제공해요. 디렉토리 구조를 맞추면 간단하게 테스트를 작성할 수 있어요.
+
+```
+transforms/
+├── remove-console-log.ts
+├── __tests__/
+│   └── remove-console-log.test.ts
+└── __testfixtures__/
+    ├── remove-console-log.input.ts
+    └── remove-console-log.output.ts
+```
+
+```typescript
+// transforms/__testfixtures__/remove-console-log.input.ts
+const value = 42;
+console.log("debug:", value);
+doSomething(value);
+```
+
+```typescript
+// transforms/__testfixtures__/remove-console-log.output.ts
+const value = 42;
+doSomething(value);
+```
+
+```typescript
+// transforms/__tests__/remove-console-log.test.ts
+import { defineTest } from "jscodeshift/src/testUtils";
+
+defineTest(__dirname, "remove-console-log", null, "remove-console-log", {
+  parser: "tsx",
+});
+```
+
+`defineTest`는 input 파일을 transform에 통과시킨 결과가 output 파일과 일치하는지 자동으로 검증해요.
+
+### 엣지 케이스 처리
+
+실제 코드베이스에는 다양한 패턴이 존재해요. 대표적인 엣지 케이스를 미리 고려해야 해요.
+
+- `console.log`가 아닌 `console.warn`, `console.error`
+- 변수에 할당된 `const log = console.log` 패턴
+- 옵셔널 체이닝 `console?.log()` 패턴
+- 주석이 포함된 코드
+
+### --dry-run으로 안전하게 확인
+
+codemod 실행 전 반드시 안전 절차를 거치세요.
+
+```bash
+# 1단계. 변경될 파일 목록 확인
+npx jscodeshift -t transforms/remove-console-log.ts src/ --dry
+
+# 2단계. 변경 내용 미리보기
+npx jscodeshift -t transforms/remove-console-log.ts src/ --dry --print
+
+# 3단계. 실행 (파서 지정)
+npx jscodeshift -t transforms/remove-console-log.ts src/ --parser=tsx --extensions=ts,tsx
+
+# 4단계. Git diff로 결과 검토
+git diff
+```
+
+<Callout type="info" title="유용한 CLI 옵션">
+  `--verbose=2`로 상세 로그를 확인하고, `--run-in-band`로 병렬 처리를 끄면
+  디버깅이 쉬워져요. `--ignore-pattern=**/node_modules/**`로 불필요한 파일을
+  제외할 수 있어요.
+</Callout>
+
+## 마무리
+
+codemod를 활용한 리팩토링의 핵심을 정리하면 다음과 같아요.
+
+- **AST 기반 변환** - 정규식과 달리 코드의 구조적 의미를 이해하므로 안전한 변환이 가능해요
+- **jscodeshift** - `find()` → `filter()` → `replaceWith()` → `toSource()` 패턴으로 codemod를 작성해요
+- **AST Explorer 활용** - 변환 전/후 코드의 AST 구조를 비교하며 개발하면 효율적이에요
+- **테스트 필수** - input/output fixture 기반 테스트로 엣지 케이스를 검증해요
+- **안전한 실행** - `--dry --print`로 미리 확인하고, Git diff로 결과를 검토해요
+
+프로젝트에서 반복적인 코드 변경 작업이 있다면 codemod를 작성해보세요. 처음에는 AST 구조가 낯설 수 있지만, AST Explorer와 함께 하나씩 만들어보면 금방 익숙해져요.
+
+### 참고 자료
+
+- [jscodeshift 공식 문서](https://jscodeshift.com/)
+- [AST Explorer](https://astexplorer.net/)
+- [Codemod Registry](https://app.codemod.com/registry)
+- [Martin Fowler - Refactoring with Codemods](https://martinfowler.com/articles/codemods-api-refactoring.html)
