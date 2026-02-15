@@ -1,6 +1,6 @@
 ---
-title: 인트로
-description: Afaik의 문서페이지는 공부한 기록을 정리하는 목적으로 만들어졌습니다.
+title: 기록
+description: 매일, 주간 기록
 ---
 
 import {
@@ -9,15 +9,20 @@ import {
   BookOpenCheckIcon,
 } from "lucide-react";
 
-공부한 기록을 정리하는 목적으로 사용하고 있습니다.
-
 <Cards className="mt-5">
 
 <Card
-  title="workspace"
-  href="/docs/personal/vault"
+  title="Today"
+  href="/docs/personal/vault/daily"
   icon={<BookOpenCheckIcon />}
-  description="하루, 주간 기록"
+  description="매일 남기는 일"
+/>
+
+<Card
+  title="Weekly"
+  href="/docs/personal/vault/weekly"
+  icon={<BookOpenCheckIcon />}
+  description="주간 정리"
 />
 
 </Cards>
