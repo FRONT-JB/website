@@ -1,0 +1,312 @@
+---
+title: ⚡️ OpenClaw 완전 분석 - 196K 스타를 받은 로컬 AI 에이전트의 모든 것
+authors: [jb]
+description: "OpenClaw 완전 분석 - 로컬 우선 아키텍처, 설치 방법, WhatsApp·Telegram·Slack 멀티채널 통합, 보안 모델, /mesh 자동화까지 심층적으로 다뤄요. 3개월 만에 196,000 GitHub 스타를 받은 오픈소스 AI 에이전트를 지금 바로 시작해보세요."
+tags: ["Frontend", "AI", "OpenClaw", "Developer Tools", "Productivity"]
+date: 2026-02-18
+image: "/blog/open-claw.webp"
+---
+
+# OpenClaw 완전 분석 - 196K 스타를 받은 로컬 AI 에이전트의 모든 것
+
+2025년 11월, 오스트리아 개발자 Peter Steinberger가 오픈소스 AI 에이전트를 하나 공개했어요. 처음에는 Clawdbot이라는 이름이었지만, 짧은 시간 안에 OpenClaw로 이름을 바꾸고 **3개월 만에 196,000개의 GitHub 스타**를 받았어요.
+
+OpenClaw는 기존 클라우드 AI 어시스턴트와 달리 **완전히 로컬에서 실행되는** AI 에이전트예요. ChatGPT나 Claude.ai는 웹 브라우저를 통해 외부 서버에 데이터를 보내지만, OpenClaw는 내 장치에서 돌아가는 게이트웨이를 통해 WhatsApp, Telegram, Slack 등 이미 사용하는 메시징 앱에서 AI와 대화할 수 있어요.
+
+이 글에서는 OpenClaw의 핵심 아키텍처부터 설치, 실전 활용까지 깊이 분석해요. 로컬 AI 에이전트의 작동 원리가 궁금하거나, 직접 구성해보고 싶은 개발자라면 도움이 될 거예요.
+
+## OpenClaw 핵심 아키텍처 이해하기
+
+### Gateway WebSocket 제어 평면
+
+OpenClaw의 핵심은 **Gateway WebSocket 제어 평면**이에요. 이 게이트웨이는 `127.0.0.1:18789`에서 실행되며 모든 채널, 도구, 이벤트를 중앙에서 관리해요.
+
+```text
+메시징 채널들 (WhatsApp, Telegram, Slack...)
+          ↓
+[Gateway WS 제어 평면 (127.0.0.1:18789)]
+    ├─ AI 에이전트 (RPC)
+    ├─ CLI 인터페이스
+    ├─ WebChat UI
+    ├─ macOS 앱
+    └─ iOS/Android 노드
+```
+
+게이트웨이가 단일 진입점 역할을 하기 때문에, 새로운 채널(메시징 앱)을 추가하거나 LLM 모델을 교체해도 나머지 시스템에 영향을 주지 않아요.
+
+### 로컬 우선 설계 원칙
+
+"로컬 우선(local-first)"은 OpenClaw의 핵심 철학이에요. 데이터가 외부 서버로 나가지 않기 때문에 프라이버시를 보장할 수 있어요.
+
+<Callout type="info" title="클라우드 AI와의 차이">
+  ChatGPT, Claude.ai 같은 클라우드 AI는 대화 내용이 외부 서버에 전송돼요.
+  OpenClaw는 모든 처리가 내 장치에서 이루어지므로, 민감한 내용도 안심하고 사용할
+  수 있어요.
+</Callout>
+
+지원하는 LLM 모델은 다음과 같아요.
+
+- **Anthropic** - Claude Pro/Max (권장)
+- **OpenAI** - GPT-4o, GPT-o3
+- **DeepSeek** - DeepSeek R1
+
+### 지원 플랫폼 생태계
+
+OpenClaw는 **12개 이상의 메시징 플랫폼**을 단일 게이트웨이로 통합해요.
+
+| 카테고리    | 지원 플랫폼                                       |
+| ----------- | ------------------------------------------------- |
+| 개인 메시징 | WhatsApp, Telegram, Signal, iMessage(BlueBubbles) |
+| 업무 도구   | Slack, Microsoft Teams, Google Chat               |
+| 커뮤니티    | Discord, Matrix                                   |
+| 기타        | Zalo, WebChat                                     |
+
+## 설치 및 초기 설정
+
+### 시스템 요구사항 및 설치
+
+OpenClaw를 실행하려면 **Node.js 22 이상**이 필요해요. macOS와 Linux에서 가장 잘 동작하고, Windows는 WSL2를 권장해요.
+
+```bash
+# Node.js 버전 확인
+node --version  # v22.x.x 이상 필요
+
+# OpenClaw 전역 설치
+npm install -g openclaw@latest
+
+# 설치 확인
+openclaw --version
+```
+
+### 온보딩 마법사 사용법
+
+설치 후 온보딩 마법사를 실행하면 게이트웨이, 채널, LLM 모델을 단계별로 설정할 수 있어요.
+
+```bash
+openclaw onboard --install-daemon
+```
+
+온보딩 마법사는 다음 순서로 진행돼요.
+
+1. **게이트웨이 설정** - 포트 및 데몬 설정
+2. **LLM 모델 선택** - Claude, GPT, DeepSeek 중 선택
+3. **채널 연결** - 사용할 메시징 앱 연결
+4. **보안 설정** - DM 정책 및 페어링 설정
+
+### 모델 설정
+
+LLM 모델은 설정 파일에서 변경할 수 있어요.
+
+```json
+// ~/.openclaw/openclaw.json
+{
+  "agent": {
+    "model": "anthropic/claude-opus-4-6"
+  }
+}
+```
+
+다른 모델을 사용하고 싶다면 `model` 값만 변경하면 돼요.
+
+```json
+// ~/.openclaw/openclaw.json - OpenAI 모델 사용 시
+{
+  "agent": {
+    "model": "openai/gpt-4o"
+  }
+}
+```
+
+## 핵심 기능 심층 분석
+
+### 멀티채널 메시징 통합
+
+OpenClaw의 가장 큰 특징은 여러 메시징 앱을 하나의 AI 에이전트로 제어할 수 있다는 점이에요. Telegram에서 질문을 보내고, Slack에서 작업 결과를 받는 식으로 활용할 수 있어요.
+
+```bash
+# 특정 채널로 메시지 전송 (CLI)
+openclaw message send --channel telegram "오늘 할 일 정리해줘"
+
+# 에이전트 상태 확인
+openclaw agent status
+```
+
+메시징 앱 안에서 직접 명령어를 사용할 수도 있어요.
+
+```text
+# 채팅 명령어 (WhatsApp, Telegram, Slack에서 사용 가능)
+/status          - 세션 상태 확인
+/think medium    - 생각 깊이 설정 (low, medium, high)
+/verbose on      - 상세 응답 모드
+/new             - 대화 세션 초기화
+/reset           - 모든 설정 초기화
+```
+
+### Voice Wake & Talk Mode
+
+OpenClaw는 음성 기능도 지원해요. **Voice Wake**는 항상 대기 중인 음성 인식이고, **Talk Mode**는 ElevenLabs와 연동한 지속 대화 기능이에요.
+
+```bash
+# macOS에서 음성 모드 활성화
+openclaw voice enable --wake-word "hey claw"
+```
+
+<Callout type="info" title="ElevenLabs 연동 필요">
+  Talk Mode를 사용하려면 ElevenLabs API 키가 필요해요. 음성 합성 품질이 꽤
+  자연스럽게 들려요.
+</Callout>
+
+### /mesh 명령으로 에이전트 워크플로우 자동화
+
+`/mesh` 명령은 OpenClaw의 강력한 자동화 기능이에요. 복잡한 목표를 입력하면 에이전트가 여러 단계로 나눠 자동으로 실행해요.
+
+```text
+# 채팅에서 직접 실행
+/mesh GitHub 저장소 분석 후 README 개선 사항 정리해줘
+
+# 결과 예시
+[1/4] 저장소 구조 분석 중...
+[2/4] 기존 README 내용 검토 중...
+[3/4] 개선 사항 도출 중...
+[4/4] 보고서 작성 완료
+```
+
+<Callout>
+  `/mesh`는 Claude Code Agent Teams와 유사한 개념이에요. 하나의 목표를 자동으로
+  하위 작업으로 분해하고 순차적으로 실행해요.
+</Callout>
+
+## 보안 모델 이해하기
+
+### DM 정책과 페어링 시스템
+
+OpenClaw의 기본 DM 정책은 **pairing 모드**예요. 알 수 없는 발신자가 메시지를 보내면 짧은 페어링 코드를 요청하고, 코드를 입력해야 메시지를 처리해요. 이 방식으로 무단 접근을 차단해요.
+
+```json
+// ~/.openclaw/openclaw.json
+{
+  "security": {
+    "dmPolicy": "pairing" // 기본값 - 페어링 코드 요청
+  }
+}
+```
+
+누구나 메시지를 보낼 수 있도록 허용하려면 `open`으로 변경할 수 있어요.
+
+```json
+// 개방형 설정 (신중하게 사용)
+{
+  "security": {
+    "dmPolicy": "open"
+  }
+}
+```
+
+<Callout type="error" title="주의">
+  `dmPolicy: "open"`은 누구나 내 AI 에이전트에 접근할 수 있는 설정이에요. 공개된
+  환경에서 사용할 때는 반드시 추가 인증 방법을 설정하세요.
+</Callout>
+
+### openclaw doctor로 보안 점검
+
+`openclaw doctor` 명령을 사용하면 현재 보안 설정을 점검할 수 있어요.
+
+```bash
+openclaw doctor
+
+# 출력 예시
+✅ Gateway - 정상 실행 중 (127.0.0.1:18789)
+✅ DM Policy - pairing 모드 (안전)
+⚠️  Funnel Mode - 공개 HTTPS 활성화 (비밀번호 설정 권장)
+✅ Node.js 버전 - v22.11.0
+```
+
+경고 항목이 있으면 설정 파일에서 수정하거나 권장 설정으로 변경해요.
+
+### 원격 접근 설정 (Tailscale)
+
+집 외부에서 OpenClaw에 접근하려면 Tailscale을 활용할 수 있어요. Tailscale의 Serve 모드와 Funnel 모드를 지원해요.
+
+```bash
+# Tailscale Serve 모드 (테일넷 전용 - 더 안전)
+tailscale serve 18789
+
+# Tailscale Funnel 모드 (공개 HTTPS - 비밀번호 필수)
+tailscale funnel 18789
+```
+
+Linux 서버에 게이트웨이를 올려두고 모든 기기에서 접근하는 방식이 가장 안정적이에요.
+
+## 실전 활용 사례
+
+### 개발자를 위한 워크플로우 자동화
+
+GitHub, Jira 등의 개발 도구와 연동하면 반복 작업을 자동화할 수 있어요.
+
+```text
+# GitHub Issues 요약 자동화
+/mesh 오늘 생성된 GitHub Issues 요약하고 우선순위 정해줘
+
+# 코드 리뷰 알림 처리
+/mesh 열려 있는 PR 목록 확인하고 내가 리뷰해야 할 것들 알려줘
+```
+
+### 개인 생산성 도구로 활용
+
+Cron 작업과 웹훅을 활용해 정기적인 작업을 자동화할 수 있어요.
+
+```json
+// ~/.openclaw/openclaw.json - Cron 작업 설정
+{
+  "crons": [
+    {
+      "schedule": "0 9 * * 1-5",
+      "task": "오늘의 할 일 목록 정리해서 Telegram으로 전송"
+    }
+  ]
+}
+```
+
+### 로컬 서버 배포 전략
+
+항상 켜져 있는 환경이 필요하다면 소형 Linux 서버에 배포하는 방법이 효과적이에요.
+
+```bash
+# Linux 서버 배포 예시 (Raspberry Pi, VPS 등)
+npm install -g openclaw@latest
+openclaw onboard --install-daemon  # systemd 데몬으로 자동 시작 설정
+
+# 서비스 상태 확인
+systemctl status openclaw-gateway
+```
+
+원격에서는 Tailscale로 안전하게 접근할 수 있어요.
+
+## 마무리 - OpenClaw, 써야 할까요?
+
+OpenClaw는 단순한 AI 챗봇이 아니에요. 로컬 우선 아키텍처를 기반으로 다양한 채널과 도구를 하나로 연결하는 에이전트 인프라예요.
+
+핵심을 요약하면 이래요.
+
+- **프라이버시 보장** - 데이터가 외부로 나가지 않아 민감한 작업도 안심하고 사용 가능
+- **멀티채널 통합** - 이미 쓰는 메시징 앱(WhatsApp, Telegram, Slack)에서 AI 사용 가능
+- **자동화 능력** - `/mesh` 명령으로 복잡한 다단계 워크플로우 자동 실행
+- **유연한 모델** - Claude, GPT, DeepSeek 중 선호하는 모델 선택 가능
+- **개발자 친화적** - CLI, Webhook, Cron 등 다양한 통합 방법 제공
+
+다음과 같은 분께 특히 추천해요.
+
+- 업무 메시징(Slack, Teams)에서 AI 어시스턴트가 필요한 개발자
+- 대화 내용이 외부 서버에 저장되는 게 불편한 분
+- 반복적인 개발 워크플로우를 자동화하고 싶은 분
+
+Peter Steinberger가 OpenAI에 합류하면서 프로젝트 소유권은 독립 재단으로 이전될 예정이에요. OpenAI의 지원을 받으면서도 오픈소스를 유지하는 하이브리드 모델로 발전할 가능성이 높아요. 커뮤니티 주도 개발과 기업 지원의 조합이 앞으로 어떻게 성장할지 지켜볼 만해요.
+
+---
+
+**참고 자료**
+
+- [OpenClaw GitHub](https://github.com/openclaw/openclaw)
+- [OpenClaw 공식 문서](https://docs.openclaw.ai)
+- [Three months of OpenClaw - Simon Willison](https://simonwillison.net/2026/Feb/15/openclaw/)
+- [OpenClaw - Wikipedia](https://en.wikipedia.org/wiki/OpenClaw)
