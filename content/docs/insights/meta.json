@@ -1,0 +1,6 @@
+{
+  "title": "인사이트",
+  "description": "기술 생태계의 최신 트렌드와 인사이트를 수집하고 분석합니다",
+  "root": true,
+  "pages": ["index", "---Github---", "github"]
+}

@@ -4,7 +4,7 @@ import { BookIcon, LayoutListIcon } from "lucide-react";
 
 export const linkItems: LinkItemType[] = [
   {
-    url: "/docs/personal",
+    url: "/docs/insights",
     icon: <BookIcon />,
     text: "문서",
     active: "nested-url",
